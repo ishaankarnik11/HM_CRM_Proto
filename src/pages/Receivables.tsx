@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Search, Download, Eye, Printer, FileText } from 'lucide-react';
+import { Calendar, Search, Download, Eye, Printer, FileText, Filter } from 'lucide-react';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { ProFormaInvoiceModal } from '../components/ProFormaInvoiceModal';
 import { Button } from '../components/ui/button';
@@ -63,6 +63,13 @@ export const Receivables = () => {
   const [appointments, setAppointments] = useState(mockAppointments);
   const [showResults, setShowResults] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [savedInvoices, setSavedInvoices] = useState<any[]>([]);
+  const [invoiceFilter, setInvoiceFilter] = useState({
+    corporate: '',
+    status: '',
+    startDate: '',
+    endDate: ''
+  });
 
   const selectedAppointments = appointments.filter(apt => apt.selected);
   const totalAmount = selectedAppointments.reduce((sum, apt) => sum + apt.serviceRate, 0);
@@ -87,6 +94,20 @@ export const Receivables = () => {
       prev.map(apt => ({ ...apt, selected: !allSelected }))
     );
   };
+
+  const handleSaveInvoice = (invoice: any) => {
+    setSavedInvoices(prev => [...prev, invoice]);
+  };
+
+  const filteredInvoices = savedInvoices.filter(invoice => {
+    const matchesCorporate = !invoiceFilter.corporate || invoice.corporate.toLowerCase().includes(invoiceFilter.corporate.toLowerCase());
+    const matchesStatus = !invoiceFilter.status || invoice.status === invoiceFilter.status;
+    const invoiceDate = new Date(invoice.createdDate);
+    const matchesStartDate = !invoiceFilter.startDate || invoiceDate >= new Date(invoiceFilter.startDate);
+    const matchesEndDate = !invoiceFilter.endDate || invoiceDate <= new Date(invoiceFilter.endDate);
+    
+    return matchesCorporate && matchesStatus && matchesStartDate && matchesEndDate;
+  });
 
   return (
     <div>
@@ -277,12 +298,121 @@ export const Receivables = () => {
         </div>
       )}
 
+      {/* Saved Invoices Section */}
+      <div className="bg-card border border-border rounded-lg p-6 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="section-header">Saved Pro-Forma Invoices</h2>
+          <span className="text-sm text-text-secondary">{savedInvoices.length} invoices saved</span>
+        </div>
+
+        {/* Invoice Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">Corporate</label>
+            <Input
+              placeholder="Search by corporate"
+              value={invoiceFilter.corporate}
+              onChange={(e) => setInvoiceFilter(prev => ({ ...prev, corporate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">Status</label>
+            <Select value={invoiceFilter.status} onValueChange={(value) => setInvoiceFilter(prev => ({ ...prev, status: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="Draft">Draft</SelectItem>
+                <SelectItem value="Sent">Sent</SelectItem>
+                <SelectItem value="Paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">From Date</label>
+            <Input
+              type="date"
+              value={invoiceFilter.startDate}
+              onChange={(e) => setInvoiceFilter(prev => ({ ...prev, startDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">To Date</label>
+            <Input
+              type="date"
+              value={invoiceFilter.endDate}
+              onChange={(e) => setInvoiceFilter(prev => ({ ...prev, endDate: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        {/* Invoices Table */}
+        {filteredInvoices.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="crm-table">
+              <thead>
+                <tr>
+                  <th>Invoice Number</th>
+                  <th>Corporate</th>
+                  <th>PO Number</th>
+                  <th>Created Date</th>
+                  <th>Employees</th>
+                  <th>Amount (₹)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInvoices.map((invoice) => (
+                  <tr key={invoice.id}>
+                    <td>
+                      <div className="font-medium text-text-primary">{invoice.invoiceNumber}</div>
+                    </td>
+                    <td>{invoice.corporate}</td>
+                    <td>{invoice.selectedPO?.number}</td>
+                    <td>{new Date(invoice.createdDate).toLocaleDateString()}</td>
+                    <td>{invoice.appointments.length}</td>
+                    <td>₹{invoice.total.toLocaleString()}</td>
+                    <td>
+                      <span className={`badge-${invoice.status.toLowerCase()}`}>
+                        {invoice.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Printer className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-text-secondary">
+            <FileText className="w-12 h-12 mx-auto mb-4 text-text-muted" />
+            <p>No saved invoices found</p>
+            <p className="text-sm">Create your first pro-forma invoice from medical done appointments above</p>
+          </div>
+        )}
+      </div>
+
       {/* Pro-Forma Invoice Modal */}
       <ProFormaInvoiceModal
         isOpen={showInvoiceModal}
         onClose={() => setShowInvoiceModal(false)}
         selectedAppointments={selectedAppointments}
         corporate={mockCorporates.find(corp => corp.id.toString() === selectedCorporate)?.name || ''}
+        onSave={handleSaveInvoice}
       />
     </div>
   );

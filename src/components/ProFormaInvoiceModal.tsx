@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Printer, Download } from 'lucide-react';
+import { X, Printer, Download, Save } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
@@ -8,6 +8,7 @@ interface InvoiceModalProps {
   onClose: () => void;
   selectedAppointments: any[];
   corporate: string;
+  onSave?: (invoice: any) => void;
 }
 
 const mockPurchaseOrders = [
@@ -16,8 +17,28 @@ const mockPurchaseOrders = [
   { id: 3, number: 'PO-2024-003', balance: 100000 }
 ];
 
-export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, corporate }: InvoiceModalProps) => {
+export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, corporate, onSave }: InvoiceModalProps) => {
   const [selectedPO, setSelectedPO] = useState('');
+
+  const handleSave = () => {
+    if (!selectedPO) return;
+    
+    const invoice = {
+      id: Date.now(),
+      invoiceNumber,
+      corporate,
+      selectedPO: mockPurchaseOrders.find(po => po.id.toString() === selectedPO),
+      appointments: selectedAppointments,
+      subtotal,
+      gstAmount,
+      total,
+      createdDate: new Date().toISOString(),
+      status: 'Draft'
+    };
+    
+    onSave?.(invoice);
+    onClose();
+  };
   
   if (!isOpen) return null;
 
@@ -176,6 +197,10 @@ export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, co
             <div className="flex space-x-3">
               <Button variant="outline" onClick={onClose}>
                 Close
+              </Button>
+              <Button variant="outline" disabled={!selectedPO} onClick={handleSave}>
+                <Save className="w-4 h-4 mr-2" />
+                Save Draft
               </Button>
               <Button variant="outline" disabled={!selectedPO}>
                 <Printer className="w-4 h-4 mr-2" />
