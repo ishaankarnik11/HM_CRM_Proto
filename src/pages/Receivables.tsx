@@ -49,10 +49,17 @@ const mockCorporates = [
   { id: 3, name: 'MedTech Enterprises', active: true }
 ];
 
+const serviceTypes = [
+  { id: 'AHC', name: 'Annual Health Checkup' },
+  { id: 'PEC', name: 'Pre-Employment Checkup' },
+  { id: 'OPD', name: 'OPD Services' }
+];
+
 export const Receivables = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedCorporate, setSelectedCorporate] = useState('');
+  const [selectedServiceType, setSelectedServiceType] = useState('');
   const [appointments, setAppointments] = useState(mockAppointments);
   const [showResults, setShowResults] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -97,7 +104,7 @@ export const Receivables = () => {
       <div className="bg-card border border-border rounded-lg p-6 mb-6">
         <h2 className="section-header mb-4">Search Medical Done Appointments</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">
               Start Date <span className="text-destructive">*</span>
@@ -134,6 +141,24 @@ export const Receivables = () => {
                 {mockCorporates.map(corp => (
                   <SelectItem key={corp.id} value={corp.id.toString()}>
                     {corp.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              Service Type
+            </label>
+            <Select value={selectedServiceType} onValueChange={setSelectedServiceType}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Service Types" />
+              </SelectTrigger>
+              <SelectContent>
+                {serviceTypes.map(serviceType => (
+                  <SelectItem key={serviceType.id} value={serviceType.id}>
+                    {serviceType.name}
                   </SelectItem>
                 ))}
               </SelectContent>
