@@ -16,6 +16,7 @@ const mockAppointments = [
     appointmentDate: '2024-07-12',
     serviceRate: 1500,
     packageType: 'AHC',
+    serviceType: 'Annual Health Checkup',
     selected: false
   },
   {
@@ -26,6 +27,7 @@ const mockAppointments = [
     appointmentDate: '2024-07-13',
     serviceRate: 1200,
     packageType: 'PEC',
+    serviceType: 'Pre-Employment Checkup',
     selected: false
   },
   {
@@ -36,6 +38,7 @@ const mockAppointments = [
     appointmentDate: '2024-07-14',
     serviceRate: 1500,
     packageType: 'AHC',
+    serviceType: 'Annual Health Checkup',
     selected: false
   }
 ];
@@ -184,6 +187,7 @@ export const Receivables = () => {
                   <th>Employee ID</th>
                   <th>Corporate</th>
                   <th>Appointment Date</th>
+                  <th>Service Type</th>
                   <th>Service Rate (₹)</th>
                   <th>Package Type</th>
                 </tr>
@@ -214,6 +218,9 @@ export const Receivables = () => {
                       <div className="text-xs text-text-secondary">{appointment.corporate}</div>
                     </td>
                     <td>{appointment.appointmentDate}</td>
+                    <td>
+                      <div className="font-medium text-text-primary">{appointment.serviceType}</div>
+                    </td>
                     <td>₹{appointment.serviceRate.toLocaleString()}</td>
                     <td>
                       <span className={`badge-${appointment.packageType.toLowerCase()}`}>
