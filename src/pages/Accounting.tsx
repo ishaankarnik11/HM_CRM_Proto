@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom';
-import { FileText, Receipt } from 'lucide-react';
+import { FileText, Receipt, Settings } from 'lucide-react';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Receivables } from './Receivables';
+import { DCBills } from './DCBills';
+import { Masters } from './Masters';
 
 export const Accounting = () => {
   return (
@@ -10,62 +14,41 @@ export const Accounting = () => {
         { label: 'Accounting' }
       ]} />
       
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <h1 className="page-title">Accounting</h1>
         <div className="text-sm text-text-secondary">
-          Total Invoices: <span className="font-semibold text-text-primary">1,245</span>
+          Total Invoices: <span className="font-semibold text-text-primary">156</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Receivables Card */}
-        <div className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mr-4">
-              <FileText className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h2 className="section-header">Receivables</h2>
-              <p className="secondary-text">Generate pro-forma invoices for completed health checkups</p>
-            </div>
-          </div>
-          
-          <p className="body-text text-text-secondary mb-6">
-            Create invoices for Medical Done appointments to send to corporate clients
-          </p>
-          
-          <Link
-            to="/accounting/receivables"
-            className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors font-medium"
-          >
-            Manage Receivables
-          </Link>
-        </div>
-
-        {/* DC Bills Card */}
-        <div className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mr-4">
-              <Receipt className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h2 className="section-header">DC Bills & Dockets</h2>
-              <p className="secondary-text">Reconcile diagnostic center bills and create payment dockets</p>
-            </div>
-          </div>
-          
-          <p className="body-text text-text-secondary mb-6">
-            Upload DC bills and create payment dockets for completed services
-          </p>
-          
-          <Link
-            to="/accounting/dc-bills"
-            className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary-hover transition-colors font-medium"
-          >
-            Manage DC Bills
-          </Link>
-        </div>
-      </div>
+      <Tabs defaultValue="receivables" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="receivables" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Receivables
+          </TabsTrigger>
+          <TabsTrigger value="dc-bills" className="flex items-center gap-2">
+            <Receipt className="w-4 h-4" />
+            DC Bills & Dockets
+          </TabsTrigger>
+          <TabsTrigger value="masters" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Masters
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="receivables" className="mt-6">
+          <Receivables />
+        </TabsContent>
+        
+        <TabsContent value="dc-bills" className="mt-6">
+          <DCBills />
+        </TabsContent>
+        
+        <TabsContent value="masters" className="mt-6">
+          <Masters />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+      "taskmaster-ai": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["task-master-ai", "serve"],
+        "env": { "ANTHROPIC_API_KEY": "sk-ant-api03-0123456789abcdef0123456789abcdef" }
+      }
+    }
+  }
+  

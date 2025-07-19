@@ -7,16 +7,18 @@ import {
   User, 
   FileText, 
   Calculator, 
+  BarChart,
   Settings 
 } from 'lucide-react';
 
 const navigationItems = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Appointment Tracker', href: '/appointments', icon: Calendar },
+  { name: 'Accounting', href: '/accounting', icon: Calculator },
+  { name: 'Reports', href: '/reports', icon: BarChart },
   { name: 'Onsite Onboarding', href: '/onsite', icon: Users },
   { name: 'Offline Onboarding', href: '/offline', icon: User },
   { name: 'OPD Claims', href: '/opd-claims', icon: FileText },
-  { name: 'Accounting', href: '/accounting', icon: Calculator },
 ];
 
 export const Sidebar = () => {

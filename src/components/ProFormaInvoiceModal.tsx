@@ -1,24 +1,65 @@
-import { useState } from 'react';
-import { X, Printer, Download, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Printer, Download, Save, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { usePurchaseOrders } from '../hooks/useAccountingAPI';
+import { auditLogService } from '../services/auditLog';
 
 interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedAppointments: any[];
   corporate: string;
+  corporateId: string;
   onSave?: (invoice: any) => void;
 }
 
-const mockPurchaseOrders = [
-  { id: 1, number: 'PO-2024-001', balance: 50000 },
-  { id: 2, number: 'PO-2024-002', balance: 75000 },
-  { id: 3, number: 'PO-2024-003', balance: 100000 }
-];
-
-export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, corporate, onSave }: InvoiceModalProps) => {
+export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, corporate, corporateId, onSave }: InvoiceModalProps) => {
   const [selectedPO, setSelectedPO] = useState('');
+  
+  const { data: purchaseOrders, isLoading: poLoading } = usePurchaseOrders(corporateId);
+  
+  const subtotal = selectedAppointments.reduce((sum, apt) => sum + apt.serviceRate, 0);
+  const gstAmount = subtotal * 0.18;
+  const total = subtotal + gstAmount;
+  const invoiceNumber = `INV-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(5, '0')}`;
+
+  // Log modal view when opened
+  useEffect(() => {
+    if (isOpen) {
+      auditLogService.logActivity(
+        'PROFORMA_VIEWED',
+        'INVOICE',
+        `proforma-${Date.now()}`,
+        'Pro-forma Invoice Modal',
+        `Opened pro-forma invoice modal for ${corporate} with ${selectedAppointments.length} appointments`,
+        {
+          corporate,
+          appointmentCount: selectedAppointments.length,
+          totalAmount: total
+        }
+      );
+    }
+  }, [isOpen, corporate, selectedAppointments.length, total]);
+
+  const handlePOSelection = (poId: string) => {
+    setSelectedPO(poId);
+    const selectedPOData = purchaseOrders?.find(po => po.id.toString() === poId);
+    if (selectedPOData) {
+      auditLogService.logActivity(
+        'PO_SELECTED',
+        'INVOICE',
+        `po-${Date.now()}`,
+        'PO Selection',
+        `Selected PO ${selectedPOData.number} (Balance: ₹${selectedPOData.balance.toLocaleString()})`,
+        {
+          poNumber: selectedPOData.number,
+          balance: selectedPOData.balance,
+          corporate
+        }
+      );
+    }
+  };
 
   const handleSave = () => {
     if (!selectedPO) return;
@@ -27,7 +68,7 @@ export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, co
       id: Date.now(),
       invoiceNumber,
       corporate,
-      selectedPO: mockPurchaseOrders.find(po => po.id.toString() === selectedPO),
+      selectedPO: purchaseOrders?.find(po => po.id.toString() === selectedPO),
       appointments: selectedAppointments,
       subtotal,
       gstAmount,
@@ -36,16 +77,26 @@ export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, co
       status: 'Draft'
     };
     
+    auditLogService.logActivity(
+      'INVOICE_SAVED',
+      'INVOICE',
+      `proforma-${Date.now()}`,
+      'Pro-forma Invoice Saved',
+      `Saved pro-forma invoice ${invoiceNumber} for ${corporate} (₹${total.toLocaleString()})`,
+      {
+        invoiceNumber,
+        corporate,
+        appointmentCount: selectedAppointments.length,
+        totalAmount: total,
+        selectedPO: purchaseOrders?.find(po => po.id.toString() === selectedPO)?.number
+      }
+    );
+    
     onSave?.(invoice);
     onClose();
   };
   
   if (!isOpen) return null;
-
-  const subtotal = selectedAppointments.reduce((sum, apt) => sum + apt.serviceRate, 0);
-  const gstAmount = subtotal * 0.18;
-  const total = subtotal + gstAmount;
-  const invoiceNumber = `INV-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(5, '0')}`;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -104,16 +155,22 @@ export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, co
             <label className="block text-sm font-medium text-text-primary mb-2">
               Select Purchase Order <span className="text-destructive">*</span>
             </label>
-            <Select value={selectedPO} onValueChange={setSelectedPO}>
+            <Select value={selectedPO} onValueChange={handlePOSelection}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select PO Number" />
               </SelectTrigger>
               <SelectContent>
-                {mockPurchaseOrders.map(po => (
-                  <SelectItem key={po.id} value={po.id.toString()}>
-                    {po.number} (Balance: ₹{po.balance.toLocaleString()})
-                  </SelectItem>
-                ))}
+                {poLoading ? (
+                  <div className="flex items-center justify-center p-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  </div>
+                ) : (
+                  purchaseOrders?.map(po => (
+                    <SelectItem key={po.id} value={po.id.toString()}>
+                      {po.number} (Balance: ₹{po.balance.toLocaleString()})
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -198,15 +255,49 @@ export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, co
               <Button variant="outline" onClick={onClose}>
                 Close
               </Button>
-              <Button variant="outline" disabled={!selectedPO} onClick={handleSave}>
+              <Button disabled={!selectedPO} onClick={handleSave} className="bg-primary hover:bg-primary-hover">
                 <Save className="w-4 h-4 mr-2" />
-                Save Draft
+                Save
               </Button>
-              <Button variant="outline" disabled={!selectedPO}>
+              <Button 
+                variant="outline" 
+                disabled={!selectedPO}
+                onClick={() => {
+                  auditLogService.logActivity(
+                    'PDF_PRINTED',
+                    'INVOICE',
+                    `proforma-${Date.now()}`,
+                    'Pro-forma Invoice Print',
+                    `Printed pro-forma invoice for ${corporate}`,
+                    {
+                      corporate,
+                      appointmentCount: selectedAppointments.length,
+                      totalAmount: total
+                    }
+                  );
+                }}
+              >
                 <Printer className="w-4 h-4 mr-2" />
                 Print
               </Button>
-              <Button disabled={!selectedPO} className="bg-primary hover:bg-primary-hover">
+              <Button 
+                disabled={!selectedPO} 
+                className="bg-primary hover:bg-primary-hover"
+                onClick={() => {
+                  auditLogService.logActivity(
+                    'PDF_DOWNLOADED',
+                    'INVOICE',
+                    `proforma-${Date.now()}`,
+                    'Pro-forma Invoice Download',
+                    `Downloaded pro-forma invoice PDF for ${corporate}`,
+                    {
+                      corporate,
+                      appointmentCount: selectedAppointments.length,
+                      totalAmount: total
+                    }
+                  );
+                }}
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Download PDF
               </Button>

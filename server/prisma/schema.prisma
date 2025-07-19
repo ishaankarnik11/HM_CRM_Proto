@@ -1,0 +1,198 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Corporate {
+  id             String          @id @default(cuid())
+  name           String
+  active         Boolean         @default(true)
+  address        String
+  gstin          String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  
+  // Relations
+  purchaseOrders PurchaseOrder[]
+  appointments   Appointment[]
+  invoices       Invoice[]
+  
+  @@map("corporates")
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  number      String    @unique
+  balance     Float
+  total       Float
+  validUntil  DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  corporateId String
+  corporate   Corporate @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  invoices    Invoice[]
+  
+  @@map("purchase_orders")
+}
+
+model DiagnosticCenter {
+  id          String   @id @default(cuid())
+  name        String
+  locations   String   // JSON string array
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  appointments Appointment[]
+  dcBills      DCBill[]
+  
+  @@map("diagnostic_centers")
+}
+
+model Appointment {
+  id              String            @id @default(cuid())
+  employeeName    String
+  employeeId      String
+  appointmentDate DateTime
+  serviceRate     Float
+  packageType     PackageType
+  serviceType     String
+  status          AppointmentStatus
+  age             Int?
+  gender          Gender?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  // Relations
+  corporateId        String
+  corporate          Corporate        @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  diagnosticCenterId String?
+  diagnosticCenter   DiagnosticCenter? @relation(fields: [diagnosticCenterId], references: [id], onDelete: SetNull)
+  
+  // Many-to-many relations
+  invoices           InvoiceAppointment[]
+  dcBills            DCBillAppointment[]
+  
+  @@map("appointments")
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique
+  corporate     String
+  subtotal      Float
+  gstAmount     Float
+  total         Float
+  createdDate   DateTime      @default(now())
+  dueDate       DateTime
+  status        InvoiceStatus
+  createdBy     String
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  corporateId     String
+  corporateRel    Corporate     @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  purchaseOrderId String?
+  selectedPO      PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  
+  // Many-to-many relations
+  appointments    InvoiceAppointment[]
+  
+  @@map("invoices")
+}
+
+model InvoiceAppointment {
+  id            String      @id @default(cuid())
+  invoiceId     String
+  appointmentId String
+  
+  // Relations
+  invoice       Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([invoiceId, appointmentId])
+  @@map("invoice_appointments")
+}
+
+model DCBill {
+  id             String       @id @default(cuid())
+  docketNumber   String       @unique
+  status         DCBillStatus
+  diagnosticCenter String
+  location       String
+  period         String
+  count          Int
+  amount         Float
+  createdDate    DateTime     @default(now())
+  submittedDate  DateTime?
+  updatedAt      DateTime     @updatedAt
+  
+  // File attachment
+  billFileName   String?
+  billFileUrl    String?
+  billFileSize   Int?
+  
+  // Relations
+  diagnosticCenterId String?
+  diagnosticCenterRel DiagnosticCenter? @relation(fields: [diagnosticCenterId], references: [id], onDelete: SetNull)
+  
+  // Many-to-many relations
+  appointments       DCBillAppointment[]
+  
+  @@map("dc_bills")
+}
+
+model DCBillAppointment {
+  id            String      @id @default(cuid())
+  dcBillId      String
+  appointmentId String
+  
+  // Relations
+  dcBill        DCBill      @relation(fields: [dcBillId], references: [id], onDelete: Cascade)
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([dcBillId, appointmentId])
+  @@map("dc_bill_appointments")
+}
+
+// Enums
+enum PackageType {
+  AHC
+  PEC
+  OPD
+}
+
+enum Gender {
+  M
+  F
+}
+
+enum AppointmentStatus {
+  MEDICAL_DONE
+  PENDING
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+}
+
+enum DCBillStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PAID
+}
