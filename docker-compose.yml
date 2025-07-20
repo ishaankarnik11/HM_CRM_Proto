@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:15-alpine
+    container_name: hm_crm_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-hm_crm}
+      POSTGRES_USER: ${DB_USER:-hmcrm}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password_123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - hm_crm_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hmcrm} -d ${DB_NAME:-hm_crm}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API
+  backend:
+    build: ./backend
+    container_name: hm_crm_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 5000
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-hm_crm}
+      DB_USER: ${DB_USER:-hmcrm}
+      DB_PASSWORD: ${DB_PASSWORD:-secure_password_123}
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key_here}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "5000:5000"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - hm_crm_network
+    volumes:
+      - ./backend/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend React App
+  frontend:
+    build: .
+    container_name: hm_crm_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - hm_crm_network
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:5000/api}
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: hm_crm_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - hm_crm_network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  hm_crm_network:
+    driver: bridge
