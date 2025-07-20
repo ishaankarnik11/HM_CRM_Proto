@@ -5,6 +5,14 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../components/ui/pagination';
 import { DCBillViewModal } from '../components/DCBillViewModal';
 import { DCBillEditModal } from '../components/DCBillEditModal';
 import { 
@@ -46,6 +54,13 @@ export const DCBills = () => {
     location: '',
     status: ''
   });
+  const [dcBillsPagination, setDcBillsPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
+  const [dcBillsPageSize, setDcBillsPageSize] = useState('20');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [amountConfirmed, setAmountConfirmed] = useState(false);
@@ -176,7 +191,43 @@ export const DCBills = () => {
   const availableLocations = selectedDC ? 
     diagnosticCenters?.find(dc => dc.id === selectedDC)?.locations || [] : [];
 
-  const filteredDCBills = dcBillsData?.dcBills || [];
+  // Calculate pagination for DC bills
+  const allFilteredDCBills = dcBillsData?.dcBills || [];
+  const startIndex = (dcBillsPagination.page - 1) * dcBillsPagination.limit;
+  const endIndex = startIndex + dcBillsPagination.limit;
+  const paginatedDCBills = allFilteredDCBills.slice(startIndex, endIndex);
+
+  // Update pagination info when data changes
+  useEffect(() => {
+    const totalDCBills = allFilteredDCBills.length;
+    const totalPages = Math.ceil(totalDCBills / dcBillsPagination.limit);
+    setDcBillsPagination(prev => ({
+      ...prev,
+      total: totalDCBills,
+      totalPages: totalPages
+    }));
+  }, [allFilteredDCBills.length, dcBillsPagination.limit]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setDcBillsPagination(prev => ({ ...prev, page: 1 }));
+  }, [dcBillsFilter]);
+
+  const handleDCBillsPageChange = (page: number) => {
+    if (page >= 1 && page <= dcBillsPagination.totalPages) {
+      setDcBillsPagination(prev => ({ ...prev, page }));
+    }
+  };
+
+  const handleDCBillsPageSizeChange = (value: string) => {
+    const newLimit = parseInt(value);
+    setDcBillsPageSize(value);
+    setDcBillsPagination(prev => ({
+      ...prev,
+      limit: newLimit,
+      page: 1
+    }));
+  };
 
   // File upload handlers
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -221,7 +272,7 @@ export const DCBills = () => {
 
   // DC Bill action handlers
   const handleViewDocket = (docketId: string) => {
-    const docket = filteredDCBills.find(d => d.id === docketId);
+    const docket = allFilteredDCBills.find(d => d.id === docketId);
     if (docket) {
       auditLogService.logActivity(
         'DOCKET_VIEWED',
@@ -243,7 +294,7 @@ export const DCBills = () => {
   };
 
   const handleEditDocket = (docketId: string) => {
-    const docket = filteredDCBills.find(d => d.id === docketId);
+    const docket = allFilteredDCBills.find(d => d.id === docketId);
     if (docket) {
       auditLogService.logActivity(
         'DOCKET_EDITED',
@@ -266,7 +317,7 @@ export const DCBills = () => {
 
   const handleDeleteDocket = async (docketId: string) => {
     try {
-      const docket = filteredDCBills.find(d => d.id === docketId);
+      const docket = allFilteredDCBills.find(d => d.id === docketId);
       const confirmed = window.confirm('Are you sure you want to delete this docket?');
       if (!confirmed) return;
       
@@ -303,7 +354,7 @@ export const DCBills = () => {
   };
 
   const handleDownloadDocket = (docketId: string) => {
-    const docket = filteredDCBills.find(d => d.id === docketId);
+    const docket = allFilteredDCBills.find(d => d.id === docketId);
     
     // Log download activity
     auditLogService.logActivity(
@@ -329,7 +380,7 @@ export const DCBills = () => {
   };
 
   const handlePrintDocket = (docketId: string) => {
-    const docket = filteredDCBills.find(d => d.id === docketId);
+    const docket = allFilteredDCBills.find(d => d.id === docketId);
     
     // Log print activity
     auditLogService.logActivity(
@@ -355,7 +406,7 @@ export const DCBills = () => {
   };
 
   const handleViewActivityLog = (docketId: string) => {
-    const docket = filteredDCBills.find(d => d.id === docketId);
+    const docket = allFilteredDCBills.find(d => d.id === docketId);
     if (docket) {
       setSelectedDCBill(docket);
       setShowActivityLogModal(true);
@@ -411,7 +462,7 @@ export const DCBills = () => {
 
   const handleExportDCBills = () => {
     try {
-      if (filteredDCBills.length === 0) {
+      if (allFilteredDCBills.length === 0) {
         toast({
           title: "No Data to Export",
           description: "No DC bills found with the current filters",
@@ -432,7 +483,7 @@ export const DCBills = () => {
       };
 
       // Transform data for CSV export
-      const exportData = filteredDCBills.map(dcBill => ({
+      const exportData = allFilteredDCBills.map(dcBill => ({
         ...dcBill,
         createdDate: formatDateForCSV(dcBill.createdDate),
         totalAmount: formatCurrencyForCSV(dcBill.totalAmount)
@@ -446,16 +497,16 @@ export const DCBills = () => {
         'DC_BILL',
         `export-${Date.now()}`,
         'DC Bill Export',
-        `Exported ${filteredDCBills.length} DC bills to CSV`,
+        `Exported ${allFilteredDCBills.length} DC bills to CSV`,
         {
-          exportCount: filteredDCBills.length,
+          exportCount: allFilteredDCBills.length,
           filters: dcBillsFilter
         }
       );
       
       toast({
         title: "Export Successful",
-        description: `${filteredDCBills.length} DC bills exported to CSV`,
+        description: `${allFilteredDCBills.length} DC bills exported to CSV`,
         variant: "default"
       });
     } catch (error) {
@@ -891,14 +942,14 @@ export const DCBills = () => {
                   {dcBillsLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin inline" />
                   ) : (
-                    `${filteredDCBills.length} dockets`
+                    `${allFilteredDCBills.length} dockets`
                   )}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleExportDCBills}
-                  disabled={dcBillsLoading || filteredDCBills.length === 0}
+                  disabled={dcBillsLoading || allFilteredDCBills.length === 0}
                   title="Export filtered DC bills to CSV"
                 >
                   <FileDown className="w-4 h-4 mr-2" />
@@ -952,24 +1003,25 @@ export const DCBills = () => {
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
               <p className="text-text-secondary">Loading dockets...</p>
             </div>
-          ) : filteredDCBills.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="crm-table">
-                <thead>
-                  <tr>
-                    <th>Docket Number</th>
-                    <th>Status</th>
-                    <th>DC</th>
-                    <th>Location</th>
-                    <th>Period</th>
-                    <th>Count</th>
-                    <th>Amount (₹)</th>
-                    <th>Created Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDCBills.map((docket) => (
+          ) : allFilteredDCBills.length > 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <table className="crm-table">
+                  <thead>
+                    <tr>
+                      <th>Docket Number</th>
+                      <th>Status</th>
+                      <th>DC</th>
+                      <th>Location</th>
+                      <th>Period</th>
+                      <th>Count</th>
+                      <th>Amount (₹)</th>
+                      <th>Created Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedDCBills.map((docket) => (
                     <tr key={docket.id}>
                       <td className="font-medium text-primary">{docket.docketNumber}</td>
                       <td>
@@ -1057,6 +1109,73 @@ export const DCBills = () => {
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between mt-4 p-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text-secondary">Rows per page:</span>
+                <Select value={dcBillsPageSize} onValueChange={handleDCBillsPageSizeChange}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-text-secondary">
+                  {startIndex + 1}-{Math.min(endIndex, allFilteredDCBills.length)} of {allFilteredDCBills.length}
+                </span>
+                
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => handleDCBillsPageChange(dcBillsPagination.page - 1)}
+                        className={dcBillsPagination.page === 1 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: Math.min(5, dcBillsPagination.totalPages) }, (_, i) => {
+                      let pageNumber;
+                      if (dcBillsPagination.totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (dcBillsPagination.page <= 3) {
+                        pageNumber = i + 1;
+                      } else if (dcBillsPagination.page >= dcBillsPagination.totalPages - 2) {
+                        pageNumber = dcBillsPagination.totalPages - 4 + i;
+                      } else {
+                        pageNumber = dcBillsPagination.page - 2 + i;
+                      }
+                      
+                      return (
+                        <PaginationItem key={pageNumber}>
+                          <PaginationLink
+                            onClick={() => handleDCBillsPageChange(pageNumber)}
+                            isActive={dcBillsPagination.page === pageNumber}
+                            className="cursor-pointer"
+                          >
+                            {pageNumber}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+                    
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => handleDCBillsPageChange(dcBillsPagination.page + 1)}
+                        className={dcBillsPagination.page === dcBillsPagination.totalPages ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            </div>
+            </>
           ) : (
             <div className="text-center py-8 text-text-secondary">
               <FileText className="w-12 h-12 mx-auto mb-4 text-text-muted" />

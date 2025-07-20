@@ -1,0 +1,133 @@
+Difference Between Corporate Rules and Benefit Groups in Eligibility Module
+Purpose and Use Cases
+Corporate Rules
+
+Purpose: Automated eligibility determination based on employee attributes
+Use Case: Standard, scalable benefit assignments for large employee populations
+Example: "All managers in Mumbai get Package A with ₹10,000 OPD wallet"
+
+Benefit Groups
+
+Purpose: Manual override mechanism for exceptional cases
+Use Case: Ad-hoc assignments that don't fit standard criteria
+Example: "These 5 employees on special project get enhanced benefits"
+
+How They Work
+Corporate Rules
+
+Mechanism: Rule engine evaluates employee data against defined criteria
+Assignment: Automatic - runs when employees are added or data changes
+Scale: Can apply to hundreds/thousands of employees automatically
+Logic: IF (criteria met) THEN (assign benefits)
+
+Benefit Groups
+
+Mechanism: Manual selection of specific employees
+Assignment: Direct - admin explicitly adds employees to group
+Scale: Typically smaller groups (5-50 employees)
+Logic: Direct assignment without conditional criteria
+
+Screen Components
+Corporate Rule Interface
+
+Rule List Screen
+
+Rule cards showing name, eligible count, criteria summary
+Active/Inactive toggle
+Edit, Archive, Duplicate actions
+
+
+Rule Configuration Screen
+
+Criteria Builder: Dynamic conditions with:
+
+Field selection (Department, Designation, Location, etc.)
+Operators (equals, contains, between)
+Values and AND/OR logic
+
+
+Benefit Assignment:
+
+AHC package selection
+OPD wallet total amount
+Service sublimits (Consultation, Diagnostics, etc.)
+Reimbursement toggles per service
+
+
+
+
+
+Benefit Group Interface
+
+Group List Screen
+
+Table with group name, member count, benefits summary
+Create, Edit, Delete actions
+
+
+Group Creation Wizard
+
+Step 1: Employee Selection
+
+Filter panel (uses same criteria options as rules)
+Employee table with checkboxes
+Manual selection of members
+
+
+Step 2: Direct Benefit Assignment
+
+Same benefit options as rules (AHC, OPD)
+No criteria builder - benefits apply to all selected
+
+
+
+
+
+Key Operational Differences
+
+Priority: Benefit Groups override Corporate Rules
+
+If employee matches a rule AND is in a group, group wins
+Employee list shows "Benefit Source" column indicating which applies
+
+
+Maintenance:
+
+Rules: Set once, apply automatically to new/changed employees
+Groups: Must manually add/remove employees
+
+
+Flexibility:
+
+Rules: Rigid criteria-based logic
+Groups: Complete flexibility in member selection
+
+
+Audit Trail:
+
+Both track changes, but groups show manual assignments
+Rules show automated eligibility determinations
+
+
+
+Why Have Both?
+The dual system serves different organizational needs:
+
+Efficiency: Rules handle 90% of standard cases automatically
+Flexibility: Groups handle 10% exceptions without complex rule logic
+Clarity: Clear distinction between policy-based (rules) and exception-based (groups) assignments
+Maintenance: Easier to manage exceptions in groups than create complex rules for edge cases
+
+Example Scenario
+Corporate Rule: "All employees with designation 'Manager' in 'Engineering' department get Package B"
+
+Automatically applies to 200 managers
+New managers automatically eligible
+
+Benefit Group: "Project Phoenix Team"
+
+8 specific employees (mix of designations)
+Temporary enhanced benefits
+Would require complex rule logic if done via rules
+
+This separation allows clean, maintainable benefit administration at scale while preserving flexibility for special cases.

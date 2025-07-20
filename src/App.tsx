@@ -4,10 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
+import { ErrorProvider } from "./contexts/ErrorContext";
 import Index from "./pages/Index";
 import { Accounting } from "./pages/Accounting";
 import { Receivables } from "./pages/Receivables";
 import { DCBills } from "./pages/DCBills";
+import Eligibility from "./pages/Eligibility";
+import EligibilityReports from "./pages/eligibility/EligibilityReports";
 import { Breadcrumb } from "./components/Breadcrumb";
 import NotFound from "./pages/NotFound";
 
@@ -42,24 +45,39 @@ const DCBillsPage = () => (
   </div>
 );
 
+const EligibilityReportsPage = () => (
+  <div>
+    <Breadcrumb items={[
+      { label: 'Home', href: '/' },
+      { label: 'Eligibility', href: '/eligibility' },
+      { label: 'Reports & Analytics' }
+    ]} />
+    <EligibilityReports />
+  </div>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Layout>
+    <ErrorProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Layout>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/accounting" element={<Accounting />} />
             <Route path="/accounting/receivables" element={<ReceivablesPage />} />
             <Route path="/accounting/dc-bills" element={<DCBillsPage />} />
+            <Route path="/eligibility" element={<Eligibility />} />
+            <Route path="/eligibility/reports" element={<EligibilityReportsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </Layout>
-      </BrowserRouter>
-    </TooltipProvider>
+          </Layout>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ErrorProvider>
   </QueryClientProvider>
 );
 

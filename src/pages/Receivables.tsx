@@ -6,6 +6,14 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../components/ui/pagination';
 import { 
   useSearchAppointments, 
   useCorporates, 
@@ -61,6 +69,13 @@ export const Receivables = () => {
     startDate: '',
     endDate: ''
   });
+  const [invoicePagination, setInvoicePagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
+  const [invoicePageSize, setInvoicePageSize] = useState('20');
 
   const { toast } = useToast();
   const { handleError } = useApiError();
@@ -245,7 +260,43 @@ export const Receivables = () => {
     }
   };
 
-  const filteredInvoices = invoicesData?.invoices || [];
+  // Calculate pagination for invoices
+  const allFilteredInvoices = invoicesData?.invoices || [];
+  const startIndex = (invoicePagination.page - 1) * invoicePagination.limit;
+  const endIndex = startIndex + invoicePagination.limit;
+  const paginatedInvoices = allFilteredInvoices.slice(startIndex, endIndex);
+
+  // Update pagination info when data changes
+  useEffect(() => {
+    const totalInvoices = allFilteredInvoices.length;
+    const totalPages = Math.ceil(totalInvoices / invoicePagination.limit);
+    setInvoicePagination(prev => ({
+      ...prev,
+      total: totalInvoices,
+      totalPages: totalPages
+    }));
+  }, [allFilteredInvoices.length, invoicePagination.limit]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setInvoicePagination(prev => ({ ...prev, page: 1 }));
+  }, [invoiceFilter]);
+
+  const handleInvoicePageChange = (page: number) => {
+    if (page >= 1 && page <= invoicePagination.totalPages) {
+      setInvoicePagination(prev => ({ ...prev, page }));
+    }
+  };
+
+  const handleInvoicePageSizeChange = (value: string) => {
+    const newLimit = parseInt(value);
+    setInvoicePageSize(value);
+    setInvoicePagination(prev => ({
+      ...prev,
+      limit: newLimit,
+      page: 1
+    }));
+  };
 
   // Invoice action handlers
   const handleDownloadInvoice = async (invoiceId: string) => {
@@ -292,7 +343,7 @@ export const Receivables = () => {
   };
 
   const handleViewInvoice = (invoiceId: string) => {
-    const invoice = filteredInvoices.find(inv => inv.id === invoiceId);
+    const invoice = allFilteredInvoices.find(inv => inv.id === invoiceId);
     if (invoice) {
       setSelectedInvoice(invoice);
       setShowViewModal(true);
@@ -300,7 +351,7 @@ export const Receivables = () => {
   };
 
   const handleViewActivityLog = (invoiceId: string) => {
-    const invoice = filteredInvoices.find(inv => inv.id === invoiceId);
+    const invoice = allFilteredInvoices.find(inv => inv.id === invoiceId);
     if (invoice) {
       setSelectedInvoice(invoice);
       setShowActivityLogModal(true);
@@ -309,7 +360,7 @@ export const Receivables = () => {
 
   const handleExportInvoices = () => {
     try {
-      if (filteredInvoices.length === 0) {
+      if (allFilteredInvoices.length === 0) {
         toast({
           title: "No Data to Export",
           description: "No invoices found with the current filters",
@@ -328,7 +379,7 @@ export const Receivables = () => {
       };
 
       // Transform data for CSV export
-      const exportData = filteredInvoices.map(invoice => ({
+      const exportData = allFilteredInvoices.map(invoice => ({
         ...invoice,
         createdDate: formatDateForCSV(invoice.createdDate),
         total: formatCurrencyForCSV(invoice.total),
@@ -344,16 +395,16 @@ export const Receivables = () => {
         'INVOICE',
         `export-${Date.now()}`,
         'Invoice Export',
-        `Exported ${filteredInvoices.length} invoices to CSV`,
+        `Exported ${allFilteredInvoices.length} invoices to CSV`,
         {
-          exportCount: filteredInvoices.length,
+          exportCount: allFilteredInvoices.length,
           filters: invoiceFilter
         }
       );
       
       toast({
         title: "Export Successful",
-        description: `${filteredInvoices.length} invoices exported to CSV`,
+        description: `${allFilteredInvoices.length} invoices exported to CSV`,
         variant: "default"
       });
     } catch (error) {
@@ -618,14 +669,14 @@ export const Receivables = () => {
               {invoicesLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin inline" />
               ) : (
-                `${filteredInvoices.length} invoices saved`
+                `${allFilteredInvoices.length} invoices saved`
               )}
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportInvoices}
-              disabled={invoicesLoading || filteredInvoices.length === 0}
+              disabled={invoicesLoading || allFilteredInvoices.length === 0}
               title="Export filtered invoices to CSV"
             >
               <FileDown className="w-4 h-4 mr-2" />
@@ -684,22 +735,23 @@ export const Receivables = () => {
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
             <p className="text-text-secondary">Loading invoices...</p>
           </div>
-        ) : filteredInvoices.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="crm-table">
-              <thead>
-                <tr>
-                  <th>Invoice Number</th>
-                  <th>Corporate</th>
-                  <th>PO Number</th>
-                  <th>Created Date</th>
-                  <th>Employees</th>
-                  <th>Amount (₹)</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInvoices.map((invoice) => (
+        ) : allFilteredInvoices.length > 0 ? (
+          <>
+            <div className="overflow-x-auto">
+              <table className="crm-table">
+                <thead>
+                  <tr>
+                    <th>Invoice Number</th>
+                    <th>Corporate</th>
+                    <th>PO Number</th>
+                    <th>Created Date</th>
+                    <th>Employees</th>
+                    <th>Amount (₹)</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedInvoices.map((invoice) => (
                   <tr key={invoice.id}>
                     <td>
                       <div className="font-medium text-text-primary">{invoice.invoiceNumber}</div>
@@ -750,6 +802,73 @@ export const Receivables = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-text-secondary">Rows per page:</span>
+              <Select value={invoicePageSize} onValueChange={handleInvoicePageSizeChange}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-text-secondary">
+                {startIndex + 1}-{Math.min(endIndex, allFilteredInvoices.length)} of {allFilteredInvoices.length}
+              </span>
+              
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => handleInvoicePageChange(invoicePagination.page - 1)}
+                      className={invoicePagination.page === 1 ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  
+                  {Array.from({ length: Math.min(5, invoicePagination.totalPages) }, (_, i) => {
+                    let pageNumber;
+                    if (invoicePagination.totalPages <= 5) {
+                      pageNumber = i + 1;
+                    } else if (invoicePagination.page <= 3) {
+                      pageNumber = i + 1;
+                    } else if (invoicePagination.page >= invoicePagination.totalPages - 2) {
+                      pageNumber = invoicePagination.totalPages - 4 + i;
+                    } else {
+                      pageNumber = invoicePagination.page - 2 + i;
+                    }
+                    
+                    return (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          onClick={() => handleInvoicePageChange(pageNumber)}
+                          isActive={invoicePagination.page === pageNumber}
+                          className="cursor-pointer"
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => handleInvoicePageChange(invoicePagination.page + 1)}
+                      className={invoicePagination.page === invoicePagination.totalPages ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          </div>
+          </>
         ) : (
           <div className="text-center py-8 text-text-secondary">
             <FileText className="w-12 h-12 mx-auto mb-4 text-text-muted" />

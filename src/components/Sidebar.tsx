@@ -8,12 +8,14 @@ import {
   FileText, 
   Calculator, 
   BarChart,
-  Settings 
+  Settings,
+  Shield
 } from 'lucide-react';
 
 const navigationItems = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Appointment Tracker', href: '/appointments', icon: Calendar },
+  { name: 'Eligibility', href: '/eligibility', icon: Shield },
   { name: 'Accounting', href: '/accounting', icon: Calculator },
   { name: 'Reports', href: '/reports', icon: BarChart },
   { name: 'Onsite Onboarding', href: '/onsite', icon: Users },
@@ -29,7 +31,8 @@ export const Sidebar = () => {
       <nav className="p-4 space-y-2">
         {navigationItems.map((item) => {
           const isActive = location.pathname === item.href || 
-                          (item.href === '/accounting' && location.pathname.startsWith('/accounting'));
+                          (item.href === '/accounting' && location.pathname.startsWith('/accounting')) ||
+                          (item.href === '/eligibility' && location.pathname.startsWith('/eligibility'));
           const Icon = item.icon;
           
           return (
