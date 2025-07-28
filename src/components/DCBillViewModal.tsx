@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from './ui/button';
 import { Download, Printer, X } from 'lucide-react';
 import { Badge } from './ui/badge';
+import { InlineZohoReferenceEdit } from './ui/InlineZohoReferenceEdit';
+import { mockDataService } from '../services/mockData';
 
 interface DCBillViewModalProps {
   isOpen: boolean;
@@ -9,6 +11,7 @@ interface DCBillViewModalProps {
   dcBill: any; // TODO: Add proper type
   onDownload: (billId: string) => void;
   onPrint: (billId: string) => void;
+  onUpdate?: () => void;
 }
 
 export const DCBillViewModal = ({
@@ -16,7 +19,8 @@ export const DCBillViewModal = ({
   onClose,
   dcBill,
   onDownload,
-  onPrint
+  onPrint,
+  onUpdate
 }: DCBillViewModalProps) => {
   if (!dcBill) return null;
 
@@ -96,6 +100,25 @@ export const DCBillViewModal = ({
                     {dcBill.status}
                   </Badge>
                 </p>
+                {(dcBill.status === 'SUBMITTED' || dcBill.status === 'APPROVED' || dcBill.status === 'PAID') && (
+                  <div className="text-sm">
+                    <span className="font-medium">Zoho Reference:</span>
+                    <div className="mt-1">
+                      <InlineZohoReferenceEdit
+                        value={dcBill.zohoReference}
+                        onSave={async (value) => {
+                          const result = await mockDataService.updateDCBillZohoReference(dcBill.id, value);
+                          if (result.success && onUpdate) {
+                            onUpdate();
+                          }
+                          return result;
+                        }}
+                        placeholder="Enter Zoho reference"
+                        disabled={dcBill.status === 'PAID'}
+                      />
+                    </div>
+                  </div>
+                )}
                 <p className="text-sm"><span className="font-medium">Created Date:</span> {new Date(dcBill.createdDate).toLocaleDateString()}</p>
                 <p className="text-sm"><span className="font-medium">Period:</span> {dcBill.period}</p>
               </div>

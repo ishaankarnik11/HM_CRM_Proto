@@ -37,8 +37,11 @@ import {
   FileImage,
   Mail,
   Plus,
-  Trash2
+  Trash2,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
+import { useTableSort, SortableHeader } from "@/hooks/useTableSort";
 import { format } from "date-fns";
 import { eligibilityAPI } from "@/services/eligibilityAPI";
 import { useError, useAsyncOperation } from "@/contexts/ErrorContext";
@@ -90,6 +93,7 @@ const EligibilityReports = () => {
   
   const { showSuccess, showError } = useError();
   const { execute: executeAsync } = useAsyncOperation();
+
 
   const reportTemplates: ReportTemplate[] = [
     {
@@ -238,6 +242,34 @@ const EligibilityReports = () => {
       parameters: { corporate: 'Financial Services Inc', dateRange: 'Last Week' }
     }
   ];
+
+  // Mock scheduled reports data
+  const mockScheduledReports = [
+    {
+      id: '1',
+      templateName: 'Corporate Analytics Dashboard',
+      frequency: 'monthly',
+      time: '09:00',
+      nextRun: '2024-02-01T09:00:00Z',
+      recipients: 'admin@company.com, manager@company.com',
+      status: 'active' as const
+    },
+    {
+      id: '2',
+      templateName: 'Eligibility Status Report',
+      frequency: 'weekly',
+      time: '08:30',
+      nextRun: '2024-01-22T08:30:00Z',
+      recipients: 'hr@company.com',
+      status: 'active' as const
+    }
+  ];
+
+  // Table sorting for generated reports
+  const reportsSort = useTableSort([...generatedReports, ...mockGeneratedReports]);
+  
+  // Table sorting for scheduled reports  
+  const scheduledSort = useTableSort([...scheduledReports, ...mockScheduledReports]);
 
   const filteredTemplates = reportTemplates.filter(template => {
     const matchesCategory = selectedCategory === "all" || template.category === selectedCategory;
@@ -661,17 +693,47 @@ const EligibilityReports = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Report Name</TableHead>
-                      <TableHead>Generated</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Format</TableHead>
-                      <TableHead>Size</TableHead>
+                      <SortableHeader
+                        column="templateName"
+                        onSort={reportsSort.handleSort}
+                        getSortIcon={reportsSort.getSortIcon}
+                      >
+                        Report Name
+                      </SortableHeader>
+                      <SortableHeader
+                        column="generatedAt"
+                        onSort={reportsSort.handleSort}
+                        getSortIcon={reportsSort.getSortIcon}
+                      >
+                        Generated
+                      </SortableHeader>
+                      <SortableHeader
+                        column="status"
+                        onSort={reportsSort.handleSort}
+                        getSortIcon={reportsSort.getSortIcon}
+                      >
+                        Status
+                      </SortableHeader>
+                      <SortableHeader
+                        column="format"
+                        onSort={reportsSort.handleSort}
+                        getSortIcon={reportsSort.getSortIcon}
+                      >
+                        Format
+                      </SortableHeader>
+                      <SortableHeader
+                        column="size"
+                        onSort={reportsSort.handleSort}
+                        getSortIcon={reportsSort.getSortIcon}
+                      >
+                        Size
+                      </SortableHeader>
                       <TableHead>Parameters</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[...generatedReports, ...mockGeneratedReports].map((report) => (
+                    {reportsSort.sortedData.map((report) => (
                       <TableRow key={report.id}>
                         <TableCell className="font-medium">{report.templateName}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -844,7 +906,7 @@ const EligibilityReports = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {scheduledReports.length === 0 ? (
+              {[...scheduledReports, ...mockScheduledReports].length === 0 ? (
                 <div className="text-center py-12">
                   <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-muted-foreground mb-2">No Scheduled Reports</h3>
@@ -857,17 +919,53 @@ const EligibilityReports = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Report Name</TableHead>
-                        <TableHead>Frequency</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Next Run</TableHead>
-                        <TableHead>Recipients</TableHead>
-                        <TableHead>Status</TableHead>
+                        <SortableHeader
+                          column="templateName"
+                          onSort={scheduledSort.handleSort}
+                          getSortIcon={scheduledSort.getSortIcon}
+                        >
+                          Report Name
+                        </SortableHeader>
+                        <SortableHeader
+                          column="frequency"
+                          onSort={scheduledSort.handleSort}
+                          getSortIcon={scheduledSort.getSortIcon}
+                        >
+                          Frequency
+                        </SortableHeader>
+                        <SortableHeader
+                          column="time"
+                          onSort={scheduledSort.handleSort}
+                          getSortIcon={scheduledSort.getSortIcon}
+                        >
+                          Time
+                        </SortableHeader>
+                        <SortableHeader
+                          column="nextRun"
+                          onSort={scheduledSort.handleSort}
+                          getSortIcon={scheduledSort.getSortIcon}
+                        >
+                          Next Run
+                        </SortableHeader>
+                        <SortableHeader
+                          column="recipients"
+                          onSort={scheduledSort.handleSort}
+                          getSortIcon={scheduledSort.getSortIcon}
+                        >
+                          Recipients
+                        </SortableHeader>
+                        <SortableHeader
+                          column="status"
+                          onSort={scheduledSort.handleSort}
+                          getSortIcon={scheduledSort.getSortIcon}
+                        >
+                          Status
+                        </SortableHeader>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {scheduledReports.map((schedule) => (
+                      {scheduledSort.sortedData.map((schedule) => (
                         <TableRow key={schedule.id}>
                           <TableCell className="font-medium">{schedule.templateName}</TableCell>
                           <TableCell>

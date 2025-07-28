@@ -55,7 +55,7 @@ export const useInvoices = (filters?: {
   return useQuery({
     queryKey: ['invoices', filters],
     queryFn: () => Promise.resolve(mockDataService.getInvoices(filters)),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // No stale time to ensure fresh data after updates
     retry: 3,
     retryDelay: 1000,
   });
@@ -183,7 +183,7 @@ export const useDCBills = (filters?: {
   return useQuery({
     queryKey: ['dc-bills', filters],
     queryFn: () => Promise.resolve(mockDataService.getDCBills(filters)),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // No stale time to ensure fresh data after updates
     retry: 3,
     retryDelay: 1000,
   });
@@ -295,11 +295,18 @@ export const useDiagnosticCenterById = (id: string) => {
 export const usePurchaseOrders = (corporateId: string) => {
   return useQuery({
     queryKey: ['purchase-orders', corporateId],
-    queryFn: () => Promise.resolve([
-      { id: 'po-1', number: `PO/2024/001`, balance: 150000, amount: 200000 },
-      { id: 'po-2', number: `PO/2024/002`, balance: 75000, amount: 100000 },
-      { id: 'po-3', number: `PO/2024/003`, balance: 250000, amount: 300000 }
-    ]),
+    queryFn: () => Promise.resolve(
+      Array.from({ length: Math.floor(Math.random() * 5) + 3 }, (_, i) => {
+        const amount = (Math.floor(Math.random() * 500) + 100) * 1000;
+        const balance = Math.floor(amount * (0.3 + Math.random() * 0.7));
+        return {
+          id: `${corporateId}-po-${i + 1}`,
+          number: `PO/2024/${corporateId.toUpperCase()}-${(i + 1).toString().padStart(3, '0')}`,
+          balance,
+          amount
+        };
+      })
+    ),
     enabled: !!corporateId,
     staleTime: 10 * 60 * 1000, // 10 minutes
     retry: 3,

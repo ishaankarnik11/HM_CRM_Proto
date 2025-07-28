@@ -29,6 +29,7 @@ export type AuditAction =
   | 'INVOICE_SAVED'
   | 'INVOICE_DELETED'
   | 'INVOICE_EXPORTED'
+  | 'INVOICE_ZOHO_REFERENCE_UPDATED'
   
   // DC Bill Actions
   | 'DOCKET_DRAFT_CREATED'
@@ -42,6 +43,7 @@ export type AuditAction =
   | 'DOCKET_EDITED'
   | 'DOCKET_EXPORTED'
   | 'COMMENTS_ADDED'
+  | 'DOCKET_ZOHO_REFERENCE_UPDATED'
   
   // System Actions
   | 'SYSTEM_GENERATED'

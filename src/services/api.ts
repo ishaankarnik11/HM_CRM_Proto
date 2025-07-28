@@ -19,6 +19,7 @@ export interface Invoice {
   dueDate: string;
   status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE';
   createdBy: string;
+  zohoReference?: string;
 }
 
 export interface Appointment {
@@ -53,6 +54,7 @@ export interface DCBill {
     url: string;
     size: number;
   };
+  zohoReference?: string;
 }
 
 export interface Corporate {

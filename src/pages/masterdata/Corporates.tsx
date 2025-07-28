@@ -6,29 +6,30 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
+import { useTableSort, SortableHeader } from '../../hooks/useTableSort';
+import { ContractViewModal } from '../../components/CorporateViewModal';
 
-interface Corporate {
+interface Contract {
   id: string;
   code: string;
   name: string;
-  gstin: string;
   state: string;
   status: 'Active' | 'Inactive';
   contactPerson: string;
   contractPeriod: string;
+  service: 'AHC' | 'PEC';
 }
 
-interface CorporatesProps {
-  onBack?: () => void;
-}
-
-export const Corporates = ({ onBack }: CorporatesProps) => {
+export const Corporates = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [stateFilter, setStateFilter] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedCorporate, setSelectedCorporate] = useState<Contract | null>(null);
 
   // Mock data - in real implementation, this would come from API
-  const generateCorporates = (): Corporate[] => {
+  const generateCorporates = (): Contract[] => {
     const corporateNames = [
       'Tech Solutions India Pvt Ltd', 'Global Services Ltd', 'Manufacturing Co', 'Financial Services Inc',
       'Healthcare Systems Ltd', 'Digital Innovation Corp', 'Engineering Solutions', 'Pharma Industries',
@@ -48,7 +49,7 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
     const states = ['Maharashtra', 'Karnataka', 'Tamil Nadu', 'Delhi', 'Gujarat', 'Uttar Pradesh', 'West Bengal', 'Rajasthan', 'Haryana', 'Punjab', 'Telangana', 'Andhra Pradesh', 'Kerala', 'Odisha', 'Madhya Pradesh'];
     const contactPersons = ['Rajesh Kumar', 'Priya Sharma', 'Suresh Babu', 'Anita Gupta', 'Vikram Singh', 'Deepika Patel', 'Amit Verma', 'Sunita Joshi', 'Rohit Agarwal', 'Kavita Reddy', 'Manish Gupta', 'Sneha Rao', 'Arjun Nair', 'Pooja Mehta', 'Sanjay Yadav', 'Ritu Sinha', 'Nitin Sharma', 'Meera Iyer', 'Karan Malhotra', 'Divya Chopra'];
     
-    const corporates: Corporate[] = [];
+    const corporates: Contract[] = [];
     
     for (let i = 1; i <= 150; i++) {
       const nameIndex = (i - 1) % corporateNames.length;
@@ -56,18 +57,16 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
       const name = suffix > 1 ? `${corporateNames[nameIndex]} ${suffix}` : corporateNames[nameIndex];
       
       const stateCode = states[i % states.length];
-      const gstinPrefix = ['27', '29', '33', '07', '24', '09', '19', '08', '06', '03', '36', '37', '32', '21', '23'][i % 15];
-      const randomId = String(Math.floor(Math.random() * 9000) + 1000);
       
       corporates.push({
         id: i.toString(),
         code: `CORP${i.toString().padStart(3, '0')}`,
         name: name,
-        gstin: `${gstinPrefix}AABCT${randomId}${String.fromCharCode(65 + (i % 26))}${i % 10}Z${(i % 9) + 1}`,
         state: stateCode,
         status: i % 8 === 0 ? 'Inactive' : 'Active',
         contactPerson: contactPersons[i % contactPersons.length],
-        contractPeriod: i % 3 === 0 ? '2023-06-01 to 2024-05-31' : i % 3 === 1 ? '2024-01-01 to 2024-12-31' : '2024-03-01 to 2025-02-28'
+        contractPeriod: i % 3 === 0 ? '2023-06-01 to 2024-05-31' : i % 3 === 1 ? '2024-01-01 to 2024-12-31' : '2024-03-01 to 2025-02-28',
+        service: i % 2 === 0 ? 'AHC' : 'PEC'
       });
     }
     
@@ -79,14 +78,16 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
   const filteredCorporates = corporates.filter(corporate => {
     const matchesSearch = searchTerm === '' || 
       corporate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      corporate.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      corporate.gstin.toLowerCase().includes(searchTerm.toLowerCase());
+      corporate.code.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || corporate.status === statusFilter;
     const matchesState = stateFilter === 'all' || corporate.state === stateFilter;
+    const matchesService = serviceFilter === 'all' || corporate.service === serviceFilter;
     
-    return matchesSearch && matchesStatus && matchesState;
+    return matchesSearch && matchesStatus && matchesState && matchesService;
   });
+
+  const corporatesSort = useTableSort(filteredCorporates);
 
   const getStatusBadge = (status: string) => {
     return status === 'Active' ? (
@@ -96,25 +97,18 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
     );
   };
 
+  const handleViewCorporate = (corporate: Contract) => {
+    setSelectedCorporate(corporate);
+    setShowViewModal(true);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        {onBack && (
-          <Button variant="ghost" size="sm" onClick={onBack} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-        )}
-        <Breadcrumb items={[
-          { label: 'Master Data', href: '/accounting' },
-          { label: 'Corporates' }
-        ]} />
-      </div>
 
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="page-title">Corporate Clients</h1>
-          <p className="text-text-secondary">Total Corporates: {corporates.length}</p>
+          <h1 className="page-title">Contract Clients</h1>
+          <p className="text-text-secondary">Total Contracts: {corporates.length}</p>
         </div>
         <Button variant="outline" className="flex items-center gap-2">
           <Download className="w-4 h-4" />
@@ -131,7 +125,7 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
                 Search
@@ -139,7 +133,7 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search by name, code, or GSTIN"
+                  placeholder="Search by name or code"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -178,6 +172,21 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Service
+              </label>
+              <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Services" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Services</SelectItem>
+                  <SelectItem value="AHC">AHC</SelectItem>
+                  <SelectItem value="PEC">PEC</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -185,25 +194,74 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Corporate Clients ({filteredCorporates.length})</CardTitle>
+          <CardTitle>Contract Clients ({corporatesSort.sortedData.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Corporate Code</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Corporate Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">GSTIN/UIN</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">State</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Contact Person</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Contract Period</th>
+                  <SortableHeader
+                    column="code"
+                    onSort={corporatesSort.handleSort}
+                    getSortIcon={corporatesSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Contract Code
+                  </SortableHeader>
+                  <SortableHeader
+                    column="name"
+                    onSort={corporatesSort.handleSort}
+                    getSortIcon={corporatesSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Contract Name
+                  </SortableHeader>
+                  <SortableHeader
+                    column="service"
+                    onSort={corporatesSort.handleSort}
+                    getSortIcon={corporatesSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Service
+                  </SortableHeader>
+                  <SortableHeader
+                    column="state"
+                    onSort={corporatesSort.handleSort}
+                    getSortIcon={corporatesSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    State
+                  </SortableHeader>
+                  <SortableHeader
+                    column="status"
+                    onSort={corporatesSort.handleSort}
+                    getSortIcon={corporatesSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Status
+                  </SortableHeader>
+                  <SortableHeader
+                    column="contactPerson"
+                    onSort={corporatesSort.handleSort}
+                    getSortIcon={corporatesSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Contact Person
+                  </SortableHeader>
+                  <SortableHeader
+                    column="contractPeriod"
+                    onSort={corporatesSort.handleSort}
+                    getSortIcon={corporatesSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Contract Period
+                  </SortableHeader>
                   <th className="text-left py-3 px-4 font-medium text-text-primary">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCorporates.map((corporate) => (
+                {corporatesSort.sortedData.map((corporate) => (
                   <tr key={corporate.id} className="border-b hover:bg-gray-50 cursor-pointer">
                     <td className="py-3 px-4 text-sm text-text-primary font-medium">
                       {corporate.code}
@@ -212,7 +270,9 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
                       {corporate.name}
                     </td>
                     <td className="py-3 px-4 text-sm text-text-secondary">
-                      {corporate.gstin}
+                      <Badge className={corporate.service === 'AHC' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-purple-100 text-purple-800 border-purple-200'}>
+                        {corporate.service}
+                      </Badge>
                     </td>
                     <td className="py-3 px-4 text-sm text-text-secondary">
                       {corporate.state}
@@ -227,7 +287,12 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
                       {corporate.contractPeriod}
                     </td>
                     <td className="py-3 px-4">
-                      <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        onClick={() => handleViewCorporate(corporate)}
+                      >
                         <Eye className="w-4 h-4" />
                         View
                       </Button>
@@ -238,10 +303,10 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
             </table>
           </div>
           
-          {filteredCorporates.length === 0 && (
+          {corporatesSort.sortedData.length === 0 && (
             <div className="text-center py-8">
               <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-text-secondary">No corporates found matching your filters.</p>
+              <p className="text-text-secondary">No contracts found matching your filters.</p>
             </div>
           )}
         </CardContent>
@@ -250,7 +315,7 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
       {/* Pagination */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-text-secondary">
-          Showing {filteredCorporates.length} of {corporates.length} results
+          Showing {corporatesSort.sortedData.length} of {corporates.length} results
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" disabled>
@@ -261,6 +326,16 @@ export const Corporates = ({ onBack }: CorporatesProps) => {
           </Button>
         </div>
       </div>
+
+      {/* Contract View Modal */}
+      <ContractViewModal
+        isOpen={showViewModal}
+        onClose={() => {
+          setShowViewModal(false);
+          setSelectedCorporate(null);
+        }}
+        corporate={selectedCorporate}
+      />
     </div>
   );
 };

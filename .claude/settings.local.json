@@ -26,11 +26,15 @@
       "Bash(npm start)",
       "Bash(start npm start)",
       "Bash(taskkill:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(rm:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
+    "taskmaster-ai"
+  ],
+  "disabledMcpjsonServers": [
     "taskmaster-ai"
   ]
 }

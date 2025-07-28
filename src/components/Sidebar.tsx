@@ -27,7 +27,7 @@ export const Sidebar = () => {
   const location = useLocation();
   
   return (
-    <div className="w-64 bg-sidebar border-r border-border h-[calc(100vh-4rem)] overflow-y-auto">
+    <div className="fixed w-64 bg-sidebar border-r border-border h-[calc(100vh-4rem)] overflow-y-auto">
       <nav className="p-4 space-y-2">
         {navigationItems.map((item) => {
           const isActive = location.pathname === item.href || 

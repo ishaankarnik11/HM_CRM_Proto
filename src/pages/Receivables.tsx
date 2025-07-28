@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Search, Download, Eye, Printer, FileText, Filter, Loader2, FileDown, Activity } from 'lucide-react';
+import { useTableSort, SortableHeader } from '../hooks/useTableSort';
 import { ProFormaInvoiceModal } from '../components/ProFormaInvoiceModal';
 import { InvoiceViewModal } from '../components/InvoiceViewModal';
+import { InlineZohoReferenceEdit } from '../components/ui/InlineZohoReferenceEdit';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
+import { PackageTypeBadge } from '../components/ui/StatusBadge';
 import {
   Pagination,
   PaginationContent,
@@ -25,6 +28,7 @@ import {
 } from '../hooks/useAccountingAPI';
 import { exportToCSV, formatDateForCSV, formatCurrencyForCSV } from '../services/csvExport';
 import { auditLogService } from '../services/auditLog';
+import { mockDataService } from '../services/mockData';
 import { ActivityLogModal } from '../components/ActivityLogModal';
 
 const serviceTypes = [
@@ -58,6 +62,11 @@ export const Receivables = () => {
   const [selectedServiceType, setSelectedServiceType] = useState('');
   const [appointments, setAppointments] = useState<AppointmentWithSelection[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [currentScreen, setCurrentScreen] = useState<'search' | 'corporate' | 'service' | 'employees'>('search');
+  const [selectedCorporateFromSummary, setSelectedCorporateFromSummary] = useState('');
+  const [selectedServiceFromBreakdown, setSelectedServiceFromBreakdown] = useState('');
+  const [corporateSummaryData, setCorporateSummaryData] = useState<{corporate: string; corporateId: string; candidateCount: number}[]>([]);
+  const [serviceBreakdownData, setServiceBreakdownData] = useState<{service: string; candidateCount: number}[]>([]);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showActivityLogModal, setShowActivityLogModal] = useState(false);
@@ -67,7 +76,8 @@ export const Receivables = () => {
     entity: '',
     location: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    zohoReference: ''
   });
   const [invoicePagination, setInvoicePagination] = useState({
     page: 1,
@@ -103,6 +113,11 @@ export const Receivables = () => {
   } = useInvoices(invoiceFilter);
 
   const createInvoiceMutation = useCreateInvoice();
+
+  // Sorting hooks for different tables
+  const corporateSummarySort = useTableSort(corporateSummaryData);
+  const serviceBreakdownSort = useTableSort(serviceBreakdownData);
+  const appointmentsSort = useTableSort(appointments);
 
   // Reset dependent selections when parent changes
   const handleCorporateChange = (corporateId: string) => {
@@ -142,9 +157,75 @@ export const Receivables = () => {
   const totalAmount = selectedAppointments.reduce((sum, apt) => sum + apt.serviceRate, 0);
 
   const handleSearch = async () => {
-    if (startDate && endDate && selectedCorporate) {
+    if (startDate && endDate) {
       try {
-        await searchAppointments();
+        // Smart navigation based on pre-filters
+        if (selectedCorporate && selectedServiceType) {
+          // If both corporate and service are selected, go directly to employees
+          await searchAppointments();
+          setSelectedCorporateFromSummary(selectedCorporate);
+          setSelectedServiceFromBreakdown(selectedServiceType);
+          setCurrentScreen('employees');
+        } else if (selectedCorporate && !selectedServiceType) {
+          // If only corporate is selected, go to service breakdown with actual data
+          const corporateAppointments = mockDataService.getAppointments({
+            startDate,
+            endDate,
+            corporateId: selectedCorporate,
+            ...(selectedEntity && { entityId: selectedEntity }),
+            ...(selectedLocation && { locationId: selectedLocation })
+          });
+          
+          // Aggregate by service type
+          const serviceMap = new Map();
+          corporateAppointments.forEach(apt => {
+            if (serviceMap.has(apt.serviceType)) {
+              serviceMap.set(apt.serviceType, serviceMap.get(apt.serviceType) + 1);
+            } else {
+              serviceMap.set(apt.serviceType, 1);
+            }
+          });
+          
+          const services = Array.from(serviceMap.entries()).map(([service, count]) => ({
+            service,
+            candidateCount: count
+          })).filter(item => item.candidateCount > 0);
+          
+          setServiceBreakdownData(services);
+          setSelectedCorporateFromSummary(selectedCorporate);
+          setCurrentScreen('service');
+        } else {
+          // Show corporate summary with actual aggregated data
+          const allAppointments = mockDataService.getAppointments({
+            startDate,
+            endDate,
+            ...(selectedEntity && { entityId: selectedEntity }),
+            ...(selectedLocation && { locationId: selectedLocation }),
+            ...(selectedServiceType && { serviceType: selectedServiceType })
+          });
+          
+          // Aggregate by corporate
+          const corporateMap = new Map();
+          allAppointments.forEach(apt => {
+            if (corporateMap.has(apt.corporateId)) {
+              corporateMap.set(apt.corporateId, corporateMap.get(apt.corporateId) + 1);
+            } else {
+              corporateMap.set(apt.corporateId, 1);
+            }
+          });
+          
+          const summaryData = Array.from(corporateMap.entries()).map(([corporateId, count]) => {
+            const corporate = corporates?.find(c => c.id === corporateId);
+            return {
+              corporate: corporate?.name || corporateId,
+              corporateId,
+              candidateCount: count
+            };
+          }).filter(item => item.candidateCount > 0);
+          
+          setCorporateSummaryData(summaryData);
+          setCurrentScreen('corporate');
+        }
         
         // Log search activity
         auditLogService.logActivity(
@@ -152,9 +233,11 @@ export const Receivables = () => {
           'APPOINTMENT',
           `search-${Date.now()}`,
           'Appointment Search',
-          `Searched appointments for ${corporates?.find(c => c.id === selectedCorporate)?.name} from ${startDate} to ${endDate}`,
+          `Searched appointments from ${startDate} to ${endDate}`,
           { 
             corporate: selectedCorporate,
+            entity: selectedEntity,
+            location: selectedLocation,
             startDate,
             endDate,
             serviceType: selectedServiceType
@@ -249,7 +332,17 @@ export const Receivables = () => {
       setAppointments(prev => prev.map(apt => ({ ...apt, selected: false })));
       setShowInvoiceModal(false);
       
-      // Refresh invoices list
+      // Clear all form selections for a clean search
+      setSelectedCorporate('');
+      setSelectedEntity('');
+      setSelectedLocation('');
+      setSelectedServiceType('');
+      setSelectedCorporateFromSummary('');
+      setSelectedServiceFromBreakdown('');
+      setShowResults(false);
+      
+      // Navigate back to search screen and refresh invoices list
+      setCurrentScreen('search');
       refetchInvoices();
     } catch (error) {
       toast({
@@ -262,20 +355,20 @@ export const Receivables = () => {
 
   // Calculate pagination for invoices
   const allFilteredInvoices = invoicesData?.invoices || [];
+  const invoicesSort = useTableSort(allFilteredInvoices);
   const startIndex = (invoicePagination.page - 1) * invoicePagination.limit;
   const endIndex = startIndex + invoicePagination.limit;
-  const paginatedInvoices = allFilteredInvoices.slice(startIndex, endIndex);
 
   // Update pagination info when data changes
   useEffect(() => {
-    const totalInvoices = allFilteredInvoices.length;
+    const totalInvoices = invoicesSort.sortedData.length;
     const totalPages = Math.ceil(totalInvoices / invoicePagination.limit);
     setInvoicePagination(prev => ({
       ...prev,
       total: totalInvoices,
       totalPages: totalPages
     }));
-  }, [allFilteredInvoices.length, invoicePagination.limit]);
+  }, [invoicesSort.sortedData.length, invoicePagination.limit]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -418,9 +511,10 @@ export const Receivables = () => {
 
   return (
     <div>
-      {/* Filter Section */}
-      <div className="bg-card border border-border rounded-lg p-6 mb-6">
-        <h2 className="section-header mb-4">Search Medical Done Appointments</h2>
+      {/* Filter Section - Only show when on search screen */}
+      {currentScreen === 'search' && (
+        <div className="bg-card border border-border rounded-lg p-6 mb-6">
+          <h2 className="section-header mb-4">Search Medical Done Appointments</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
@@ -449,11 +543,11 @@ export const Receivables = () => {
           
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">
-              Corporate <span className="text-destructive">*</span>
+              Corporate
             </label>
             <Select value={selectedCorporate} onValueChange={handleCorporateChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Select Corporate" />
+                <SelectValue placeholder="All Corporates (Optional)" />
               </SelectTrigger>
               <SelectContent>
                 {corporatesLoading ? (
@@ -479,7 +573,7 @@ export const Receivables = () => {
             </label>
             <Select value={selectedEntity} onValueChange={handleEntityChange} disabled={!selectedCorporate}>
               <SelectTrigger>
-                <SelectValue placeholder="Select Entity" />
+                <SelectValue placeholder="All Entities (Optional)" />
               </SelectTrigger>
               <SelectContent>
                 {entitiesLoading ? (
@@ -503,7 +597,7 @@ export const Receivables = () => {
             </label>
             <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={!selectedEntity}>
               <SelectTrigger>
-                <SelectValue placeholder="Select Location" />
+                <SelectValue placeholder="All Locations (Optional)" />
               </SelectTrigger>
               <SelectContent>
                 {locationsLoading ? (
@@ -527,7 +621,7 @@ export const Receivables = () => {
             </label>
             <Select value={selectedServiceType} onValueChange={setSelectedServiceType}>
               <SelectTrigger>
-                <SelectValue placeholder="All Service Types" />
+                <SelectValue placeholder="All Service Types (Optional)" />
               </SelectTrigger>
               <SelectContent>
                 {serviceTypes.map(serviceType => (
@@ -543,7 +637,7 @@ export const Receivables = () => {
         <div className="flex justify-end">
           <Button
             onClick={handleSearch}
-            disabled={!startDate || !endDate || !selectedCorporate || searchLoading}
+            disabled={!startDate || !endDate || searchLoading}
             className="w-full md:w-auto"
           >
             {searchLoading ? (
@@ -551,25 +645,239 @@ export const Receivables = () => {
             ) : (
               <Search className="w-4 h-4 mr-2" />
             )}
-            Search Clients
+            Search
           </Button>
         </div>
       </div>
+      )}
 
-      {/* Results Section */}
-      {showResults && (
+      {/* Screen Navigation Based on Current State */}
+      {currentScreen === 'corporate' && (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="section-header">Medical Done Appointments - Corporate Summary</h3>
+                <p className="text-sm text-text-secondary mt-1">
+                  Showing results for: {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => {
+                // Clear form selections for a clean search
+                setSelectedCorporate('');
+                setSelectedEntity('');
+                setSelectedLocation('');
+                setSelectedServiceType('');
+                setSelectedCorporateFromSummary('');
+                setSelectedServiceFromBreakdown('');
+                setShowResults(false);
+                
+                setCurrentScreen('search');
+                refetchInvoices();
+              }}>
+                Back
+              </Button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="crm-table">
+              <thead>
+                <tr>
+                  <SortableHeader column="corporate" onSort={corporateSummarySort.handleSort} getSortIcon={corporateSummarySort.getSortIcon}>
+                    Corporate
+                  </SortableHeader>
+                  <SortableHeader column="candidateCount" onSort={corporateSummarySort.handleSort} getSortIcon={corporateSummarySort.getSortIcon} className="text-center">
+                    Candidates
+                  </SortableHeader>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {corporateSummarySort.sortedData.map((corp, index) => (
+                  <tr key={index}>
+                    <td>{corp.corporate}</td>
+                    <td className="text-center">{corp.candidateCount}</td>
+                    <td className="text-right">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCorporateFromSummary(corp.corporate);
+                          
+                          // Get actual service breakdown data for this corporate
+                          const corporateAppointments = mockDataService.getAppointments({
+                            startDate,
+                            endDate,
+                            corporateId: corp.corporateId
+                          });
+                          
+                          // Aggregate by service type
+                          const serviceMap = new Map();
+                          corporateAppointments.forEach(apt => {
+                            if (serviceMap.has(apt.serviceType)) {
+                              serviceMap.set(apt.serviceType, serviceMap.get(apt.serviceType) + 1);
+                            } else {
+                              serviceMap.set(apt.serviceType, 1);
+                            }
+                          });
+                          
+                          const services = Array.from(serviceMap.entries()).map(([service, count]) => ({
+                            service,
+                            candidateCount: count
+                          }));
+                          
+                          setServiceBreakdownData(services);
+                          setCurrentScreen('service');
+                        }}
+                      >
+                        Select
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Service Breakdown Screen */}
+      {currentScreen === 'service' && (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="section-header">{selectedCorporateFromSummary || corporates?.find(c => c.id === selectedCorporate)?.name} - Service Breakdown</h3>
+                <p className="text-sm text-text-secondary mt-1">
+                  Showing results for: {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => {
+                setCurrentScreen('corporate');
+                refetchInvoices();
+              }}>
+                Back
+              </Button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="crm-table">
+              <thead>
+                <tr>
+                  <SortableHeader column="service" onSort={serviceBreakdownSort.handleSort} getSortIcon={serviceBreakdownSort.getSortIcon}>
+                    Service
+                  </SortableHeader>
+                  <SortableHeader column="candidateCount" onSort={serviceBreakdownSort.handleSort} getSortIcon={serviceBreakdownSort.getSortIcon} className="text-center">
+                    Candidates
+                  </SortableHeader>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {serviceBreakdownSort.sortedData.map((service, index) => (
+                  <tr key={index}>
+                    <td>{service.service}</td>
+                    <td className="text-center">{service.candidateCount}</td>
+                    <td className="text-right">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={async () => {
+                          setSelectedServiceFromBreakdown(service.service);
+                          
+                          // Get the corporate ID from the selected corporate
+                          const corporateData = corporates?.find(c => c.name === selectedCorporateFromSummary) ||
+                                               corporates?.find(c => c.id === selectedCorporate);
+                          
+                          if (corporateData) {
+                            // Update search parameters with corporate and service type
+                            setSelectedCorporate(corporateData.id);
+                            
+                            // Map service name to service type ID
+                            let serviceTypeId = '';
+                            if (service.service === 'Annual Health Checkup') serviceTypeId = 'AHC';
+                            else if (service.service === 'Pre-Employment Checkup') serviceTypeId = 'PEC';
+                            else if (service.service === 'General Consultation') serviceTypeId = 'OPD';
+                            
+                            setSelectedServiceType(serviceTypeId);
+                            
+                            // Trigger search with updated parameters
+                            setTimeout(async () => {
+                              await searchAppointments();
+                              setCurrentScreen('employees');
+                            }, 100);
+                          }
+                        }}
+                      >
+                        Select
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Details Screen */}
+      {currentScreen === 'employees' && (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="p-4 border-b border-border">
             <div className="flex justify-between items-center">
-              <h3 className="section-header">Medical Done Appointments</h3>
-              {selectedAppointments.length > 0 && (
-                <div className="text-sm">
-                  <span className="text-text-secondary">Selected: </span>
-                  <span className="font-semibold text-text-primary">{selectedAppointments.length} employees</span>
-                  <span className="text-text-secondary"> | Total: </span>
-                  <span className="font-semibold text-primary">₹{totalAmount.toLocaleString()}</span>
+              <div>
+                <h3 className="section-header">Medical Done Appointments</h3>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <span className="text-sm text-text-secondary">
+                    Date Range: {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}
+                  </span>
+                  {(selectedCorporateFromSummary || selectedCorporate) && (
+                    <span className="text-sm text-text-secondary">
+                      | Corporate: {selectedCorporateFromSummary || corporates?.find(c => c.id === selectedCorporate)?.name}
+                    </span>
+                  )}
+                  {selectedServiceFromBreakdown && (
+                    <span className="text-sm text-text-secondary">
+                      | Service: {selectedServiceFromBreakdown}
+                    </span>
+                  )}
                 </div>
-              )}
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedAppointments.length > 0 && (
+                  <div className="text-sm">
+                    <span className="text-text-secondary">Selected: </span>
+                    <span className="font-semibold text-text-primary">{selectedAppointments.length} employees</span>
+                    <span className="text-text-secondary"> | Total: </span>
+                    <span className="font-semibold text-primary">₹{totalAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    if (selectedCorporate && selectedServiceType) {
+                      // If we came directly here, go back to search and clear form
+                      setSelectedCorporate('');
+                      setSelectedEntity('');
+                      setSelectedLocation('');
+                      setSelectedServiceType('');
+                      setSelectedCorporateFromSummary('');
+                      setSelectedServiceFromBreakdown('');
+                      setShowResults(false);
+                      
+                      setCurrentScreen('search');
+                      refetchInvoices();
+                    } else {
+                      // Otherwise go back to service breakdown
+                      setCurrentScreen('service');
+                      refetchInvoices();
+                    }
+                  }}
+                >
+                  Back
+                </Button>
+              </div>
             </div>
           </div>
           
@@ -586,17 +894,31 @@ export const Receivables = () => {
                     />
                   </th>
                   <th>Sl No</th>
-                  <th>Employee Name</th>
-                  <th>Employee ID</th>
-                  <th>Corporate</th>
-                  <th>Appointment Date</th>
-                  <th>Service Type</th>
-                  <th>Service Rate (₹)</th>
-                  <th>Package Type</th>
+                  <SortableHeader column="employeeName" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Employee Name
+                  </SortableHeader>
+                  <SortableHeader column="employeeId" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Employee ID
+                  </SortableHeader>
+                  <SortableHeader column="corporate" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Corporate
+                  </SortableHeader>
+                  <SortableHeader column="appointmentDate" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Appointment Date
+                  </SortableHeader>
+                  <SortableHeader column="serviceType" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Service Type
+                  </SortableHeader>
+                  <SortableHeader column="serviceRate" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Service Rate (₹)
+                  </SortableHeader>
+                  <SortableHeader column="packageType" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Package Type
+                  </SortableHeader>
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appointment, index) => (
+                {appointmentsSort.sortedData.map((appointment, index) => (
                   <tr
                     key={appointment.id}
                     className={appointment.selected ? 'selected' : ''}
@@ -626,9 +948,7 @@ export const Receivables = () => {
                     </td>
                     <td>₹{appointment.serviceRate.toLocaleString()}</td>
                     <td>
-                      <span className={`badge-${appointment.packageType.toLowerCase()}`}>
-                        {appointment.packageType}
-                      </span>
+                      <PackageTypeBadge packageType={appointment.packageType} />
                     </td>
                   </tr>
                 ))}
@@ -660,8 +980,9 @@ export const Receivables = () => {
         </div>
       )}
 
-      {/* Saved Invoices Section */}
-      <div className="bg-card border border-border rounded-lg p-6 mb-6">
+      {/* Saved Invoices Section - Only show on search screen */}
+      {currentScreen === 'search' && (
+        <div className="bg-card border border-border rounded-lg p-6 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="section-header">Saved Pro-Forma Invoices</h2>
           <div className="flex items-center gap-3">
@@ -686,7 +1007,7 @@ export const Receivables = () => {
         </div>
 
         {/* Invoice Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-text-primary mb-2">Corporate</label>
             <Input
@@ -709,6 +1030,14 @@ export const Receivables = () => {
               placeholder="Search by location"
               value={invoiceFilter.location}
               onChange={(e) => setInvoiceFilter(prev => ({ ...prev, location: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">Zoho Reference</label>
+            <Input
+              placeholder="Search by Zoho reference"
+              value={invoiceFilter.zohoReference}
+              onChange={(e) => setInvoiceFilter(prev => ({ ...prev, zohoReference: e.target.value }))}
             />
           </div>
           <div>
@@ -741,20 +1070,44 @@ export const Receivables = () => {
               <table className="crm-table">
                 <thead>
                   <tr>
-                    <th>Invoice Number</th>
-                    <th>Corporate</th>
+                    <SortableHeader column="invoiceNumber" onSort={invoicesSort.handleSort} getSortIcon={invoicesSort.getSortIcon}>
+                      Invoice Number
+                    </SortableHeader>
+                    <SortableHeader column="zohoReference" onSort={invoicesSort.handleSort} getSortIcon={invoicesSort.getSortIcon}>
+                      Zoho Reference
+                    </SortableHeader>
+                    <SortableHeader column="corporate" onSort={invoicesSort.handleSort} getSortIcon={invoicesSort.getSortIcon}>
+                      Corporate
+                    </SortableHeader>
                     <th>PO Number</th>
-                    <th>Created Date</th>
+                    <SortableHeader column="createdDate" onSort={invoicesSort.handleSort} getSortIcon={invoicesSort.getSortIcon}>
+                      Created Date
+                    </SortableHeader>
                     <th>Employees</th>
-                    <th>Amount (₹)</th>
+                    <SortableHeader column="total" onSort={invoicesSort.handleSort} getSortIcon={invoicesSort.getSortIcon}>
+                      Amount (₹)
+                    </SortableHeader>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedInvoices.map((invoice) => (
+                  {invoicesSort.sortedData.slice(startIndex, endIndex).map((invoice) => (
                   <tr key={invoice.id}>
                     <td>
                       <div className="font-medium text-text-primary">{invoice.invoiceNumber}</div>
+                    </td>
+                    <td>
+                      <InlineZohoReferenceEdit
+                        value={invoice.zohoReference}
+                        onSave={async (value) => {
+                          const result = await mockDataService.updateInvoiceZohoReference(invoice.id, value);
+                          if (result.success) {
+                            refetchInvoices();
+                          }
+                          return result;
+                        }}
+                        placeholder="Enter Zoho reference"
+                      />
                     </td>
                     <td>{invoice.corporate}</td>
                     <td>{invoice.selectedPO?.number || 'N/A'}</td>
@@ -821,7 +1174,7 @@ export const Receivables = () => {
             
             <div className="flex items-center gap-4">
               <span className="text-sm text-text-secondary">
-                {startIndex + 1}-{Math.min(endIndex, allFilteredInvoices.length)} of {allFilteredInvoices.length}
+                {startIndex + 1}-{Math.min(endIndex, invoicesSort.sortedData.length)} of {invoicesSort.sortedData.length}
               </span>
               
               <Pagination>
@@ -877,6 +1230,7 @@ export const Receivables = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Pro-Forma Invoice Modal */}
       <ProFormaInvoiceModal
@@ -898,6 +1252,7 @@ export const Receivables = () => {
         invoice={selectedInvoice}
         onDownload={handleDownloadInvoice}
         onPrint={handlePrintInvoice}
+        onUpdate={refetchInvoices}
       />
 
       {/* Activity Log Modal */}

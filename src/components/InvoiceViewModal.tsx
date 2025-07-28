@@ -2,6 +2,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Download, Printer, X } from 'lucide-react';
 import { Invoice } from '../services/api';
+import { InlineZohoReferenceEdit } from './ui/InlineZohoReferenceEdit';
+import { mockDataService } from '../services/mockData';
+import { InvoiceStatusBadge, PackageTypeBadge } from './ui/StatusBadge';
 
 interface InvoiceViewModalProps {
   isOpen: boolean;
@@ -9,6 +12,7 @@ interface InvoiceViewModalProps {
   invoice: Invoice | null;
   onDownload: (invoiceId: string) => void;
   onPrint: (invoiceId: string) => void;
+  onUpdate?: () => void;
 }
 
 export const InvoiceViewModal = ({ 
@@ -16,7 +20,8 @@ export const InvoiceViewModal = ({
   onClose, 
   invoice, 
   onDownload, 
-  onPrint 
+  onPrint,
+  onUpdate 
 }: InvoiceViewModalProps) => {
   if (!invoice) return null;
 
@@ -74,10 +79,25 @@ export const InvoiceViewModal = ({
               </div>
             </div>
             
-            <div className="mt-6 grid grid-cols-3 gap-4 text-sm">
+            <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-text-secondary">Invoice Number:</p>
                 <p className="font-medium">{invoice.invoiceNumber}</p>
+              </div>
+              <div>
+                <p className="text-text-secondary">Zoho Reference:</p>
+                <InlineZohoReferenceEdit
+                  value={invoice.zohoReference}
+                  onSave={async (value) => {
+                    const result = await mockDataService.updateInvoiceZohoReference(invoice.id, value);
+                    if (result.success && onUpdate) {
+                      onUpdate();
+                    }
+                    return result;
+                  }}
+                  placeholder="Enter Zoho reference"
+                  className="mt-1"
+                />
               </div>
               <div>
                 <p className="text-text-secondary">Date:</p>
@@ -85,9 +105,7 @@ export const InvoiceViewModal = ({
               </div>
               <div>
                 <p className="text-text-secondary">Status:</p>
-                <span className={`badge-${invoice.status.toLowerCase()}`}>
-                  {invoice.status}
-                </span>
+                <InvoiceStatusBadge status={invoice.status} />
               </div>
             </div>
           </div>
@@ -120,9 +138,7 @@ export const InvoiceViewModal = ({
                       <td className="p-3">{new Date(appointment.appointmentDate).toLocaleDateString()}</td>
                       <td className="p-3">{appointment.serviceType}</td>
                       <td className="p-3">
-                        <span className={`badge-${appointment.packageType.toLowerCase()}`}>
-                          {appointment.packageType}
-                        </span>
+                        <PackageTypeBadge packageType={appointment.packageType} />
                       </td>
                       <td className="p-3 text-right font-medium">₹{appointment.serviceRate.toLocaleString()}</td>
                     </tr>

@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { usePurchaseOrders } from '../hooks/useAccountingAPI';
 import { auditLogService } from '../services/auditLog';
+import { PackageTypeBadge } from './ui/StatusBadge';
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -111,7 +112,7 @@ export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, co
 
         {/* Invoice Content */}
         <div className="p-6 space-y-6">
-          {/* Company Header */}
+          {/* Contract Header */}
           <div className="text-center border-b border-border pb-6">
             <div className="flex items-center justify-center space-x-3 mb-2">
               <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
@@ -200,9 +201,7 @@ export const ProFormaInvoiceModal = ({ isOpen, onClose, selectedAppointments, co
                     <td className="px-4 py-3 text-sm">32</td>
                     <td className="px-4 py-3 text-sm">M</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={`badge-${appointment.packageType.toLowerCase()}`}>
-                        {appointment.packageType}
-                      </span>
+                      <PackageTypeBadge packageType={appointment.packageType} />
                     </td>
                     <td className="px-4 py-3 text-sm">998314</td>
                     <td className="px-4 py-3 text-sm text-right">₹{appointment.serviceRate.toLocaleString()}</td>

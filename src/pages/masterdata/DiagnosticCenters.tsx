@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
+import { useTableSort, SortableHeader } from '../../hooks/useTableSort';
 
 interface DiagnosticCenter {
   id: string;
@@ -111,6 +112,8 @@ export const DiagnosticCenters = ({ onBack }: DiagnosticCentersProps) => {
     
     return matchesSearch && matchesStatus && matchesServiceType;
   });
+
+  const centersSort = useTableSort(filteredCenters);
 
   const getStatusBadge = (status: string) => {
     return status === 'Active' ? (
@@ -232,25 +235,67 @@ export const DiagnosticCenters = ({ onBack }: DiagnosticCentersProps) => {
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Diagnostic Centers ({filteredCenters.length})</CardTitle>
+          <CardTitle>Diagnostic Centers ({centersSort.sortedData.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">DC Code</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">DC Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Primary Location</th>
+                  <SortableHeader
+                    column="code"
+                    onSort={centersSort.handleSort}
+                    getSortIcon={centersSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    DC Code
+                  </SortableHeader>
+                  <SortableHeader
+                    column="name"
+                    onSort={centersSort.handleSort}
+                    getSortIcon={centersSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    DC Name
+                  </SortableHeader>
+                  <SortableHeader
+                    column="primaryLocation"
+                    onSort={centersSort.handleSort}
+                    getSortIcon={centersSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Primary Location
+                  </SortableHeader>
                   <th className="text-left py-3 px-4 font-medium text-text-primary">Service Types</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Contact Person</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Status</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Child DCs</th>
+                  <SortableHeader
+                    column="contactPerson"
+                    onSort={centersSort.handleSort}
+                    getSortIcon={centersSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Contact Person
+                  </SortableHeader>
+                  <SortableHeader
+                    column="status"
+                    onSort={centersSort.handleSort}
+                    getSortIcon={centersSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Status
+                  </SortableHeader>
+                  <SortableHeader
+                    column="childDCs"
+                    onSort={centersSort.handleSort}
+                    getSortIcon={centersSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Child DCs
+                  </SortableHeader>
                   <th className="text-left py-3 px-4 font-medium text-text-primary">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCenters.map((center) => (
+                {centersSort.sortedData.map((center) => (
                   <tr key={center.id} className="border-b hover:bg-gray-50 cursor-pointer">
                     <td className="py-3 px-4 text-sm text-text-primary font-medium">
                       {center.code}
@@ -287,7 +332,7 @@ export const DiagnosticCenters = ({ onBack }: DiagnosticCentersProps) => {
             </table>
           </div>
           
-          {filteredCenters.length === 0 && (
+          {centersSort.sortedData.length === 0 && (
             <div className="text-center py-8">
               <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-text-secondary">No diagnostic centers found matching your filters.</p>
@@ -299,7 +344,7 @@ export const DiagnosticCenters = ({ onBack }: DiagnosticCentersProps) => {
       {/* Pagination */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-text-secondary">
-          Showing {filteredCenters.length} of {diagnosticCenters.length} results
+          Showing {centersSort.sortedData.length} of {diagnosticCenters.length} results
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" disabled>

@@ -209,4 +209,124 @@
     @apply bg-gray-100 text-foreground;
     background-color: #f3f4f6 !important;
   }
+
+  /* Status Badge Styles - MyHealthMeter CRM Accounting Module */
+  /* Following Status Streamlining PRD v1.0 - January 2025 */
+  
+  .badge-base {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* === APPOINTMENT STATUSES === */
+  /* Per PRD: Only "Medical Done" status with flag system */
+  .badge-medical-done {
+    @apply badge-base bg-green-100 text-green-800 border border-green-200;
+  }
+
+  /* === INVOICE STATUSES === */
+  /* Per PRD: Only 2 statuses - Submitted, Cancelled */
+  .badge-submitted {
+    @apply badge-base bg-blue-100 text-blue-800 border border-blue-200;
+  }
+
+  .badge-cancelled {
+    @apply badge-base bg-red-100 text-red-800 border border-red-200;
+  }
+
+  /* === DC BILL/DOCKET STATUSES === */
+  /* Per PRD: 5 statuses - Draft, Disputed, Approved, Cancelled, Paid */
+  .badge-draft {
+    @apply badge-base bg-gray-100 text-gray-800 border border-gray-200;
+  }
+
+  .badge-disputed {
+    @apply badge-base bg-orange-100 text-orange-800 border border-orange-200;
+  }
+
+  .badge-approved {
+    @apply badge-base bg-green-100 text-green-800 border border-green-200;
+  }
+
+  .badge-paid {
+    @apply badge-base bg-emerald-100 text-emerald-800 border border-emerald-200;
+  }
+
+  /* === EMPLOYEE STATUSES === */
+  .badge-active {
+    @apply badge-base bg-green-100 text-green-800 border border-green-200;
+  }
+
+  .badge-inactive {
+    @apply badge-base bg-gray-100 text-gray-800 border border-gray-200;
+  }
+
+  .badge-terminated {
+    @apply badge-base bg-red-100 text-red-800 border border-red-200;
+  }
+
+  /* === PACKAGE/SERVICE TYPES === */
+  .badge-ahc {
+    @apply badge-base bg-blue-100 text-blue-800 border border-blue-200;
+  }
+
+  .badge-pec {
+    @apply badge-base bg-purple-100 text-purple-800 border border-purple-200;
+  }
+
+  .badge-opd {
+    @apply badge-base bg-cyan-100 text-cyan-800 border border-cyan-200;
+  }
+
+  /* === BENEFIT & PASSCODE STATUSES === */
+  .badge-pending {
+    @apply badge-base bg-yellow-100 text-yellow-800 border border-yellow-200;
+  }
+
+  .badge-expired {
+    @apply badge-base bg-red-100 text-red-800 border border-red-200;
+  }
+
+  /* === AVAILABILITY STATUSES === */
+  .badge-available {
+    @apply badge-base bg-green-100 text-green-800 border border-green-200;
+  }
+
+  .badge-not-available {
+    @apply badge-base bg-gray-100 text-gray-800 border border-gray-200;
+  }
+
+  /* === LEGACY/DEPRECATED STATUSES === */
+  /* These should be removed after status streamlining */
+  .badge-sent {
+    @apply badge-base bg-indigo-100 text-indigo-800 border border-indigo-200;
+  }
+
+  .badge-overdue {
+    @apply badge-base bg-red-100 text-red-800 border border-red-200;
+  }
+
+  .badge-rejected {
+    @apply badge-base bg-red-100 text-red-800 border border-red-200;
+  }
+
+  .badge-processing {
+    @apply badge-base bg-amber-100 text-amber-800 border border-amber-200;
+  }
+
+  .badge-completed {
+    @apply badge-base bg-green-100 text-green-800 border border-green-200;
+  }
+
+  .badge-scheduled {
+    @apply badge-base bg-indigo-100 text-indigo-800 border border-indigo-200;
+  }
+
+  .badge-rescheduled {
+    @apply badge-base bg-orange-100 text-orange-800 border border-orange-200;
+  }
+
+  /* === DEFAULT FALLBACK === */
+  .badge-default {
+    @apply badge-base bg-gray-100 text-gray-800 border border-gray-200;
+  }
 }

@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Upload, FileText, Download, Edit, Trash2, Eye, Loader2, X, FileDown, Activity } from 'lucide-react';
+import { useTableSort, SortableHeader } from '../hooks/useTableSort';
+import { InlineZohoReferenceEdit } from '../components/ui/InlineZohoReferenceEdit';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { useToast } from '../hooks/use-toast';
+import { DCBillStatusBadge, StatusBadge } from '../components/ui/StatusBadge';
 import {
   Pagination,
   PaginationContent,
@@ -28,6 +31,7 @@ import {
 import { fileUploadService } from '../services/fileUpload';
 import { exportToCSV, formatDateForCSV, formatCurrencyForCSV } from '../services/csvExport';
 import { auditLogService } from '../services/auditLog';
+import { mockDataService } from '../services/mockData';
 import { ActivityLogModal } from '../components/ActivityLogModal';
 
 interface DCAppointmentWithSelection {
@@ -97,6 +101,9 @@ export const DCBills = () => {
   const createDCBillMutation = useCreateDCBill();
   const deleteDCBillMutation = useDeleteDCBill();
   const updateDCBillMutation = useUpdateDCBillStatus();
+
+  // Sorting hooks for different tables  
+  const appointmentsSort = useTableSort(appointments);
 
   // Update appointments when search results change
   useEffect(() => {
@@ -193,20 +200,21 @@ export const DCBills = () => {
 
   // Calculate pagination for DC bills
   const allFilteredDCBills = dcBillsData?.dcBills || [];
+  const dcBillsSort = useTableSort(allFilteredDCBills);
   const startIndex = (dcBillsPagination.page - 1) * dcBillsPagination.limit;
   const endIndex = startIndex + dcBillsPagination.limit;
-  const paginatedDCBills = allFilteredDCBills.slice(startIndex, endIndex);
+  const paginatedDCBills = dcBillsSort.sortedData.slice(startIndex, endIndex);
 
   // Update pagination info when data changes
   useEffect(() => {
-    const totalDCBills = allFilteredDCBills.length;
+    const totalDCBills = dcBillsSort.sortedData.length;
     const totalPages = Math.ceil(totalDCBills / dcBillsPagination.limit);
     setDcBillsPagination(prev => ({
       ...prev,
       total: totalDCBills,
       totalPages: totalPages
     }));
-  }, [allFilteredDCBills.length, dcBillsPagination.limit]);
+  }, [dcBillsSort.sortedData.length, dcBillsPagination.limit]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -759,16 +767,28 @@ export const DCBills = () => {
                       className="rounded border-border"
                     />
                   </th>
-                  <th>Appointment ID</th>
-                  <th>Employee</th>
-                  <th>Corporate</th>
-                  <th>Date</th>
-                  <th>Rate (₹)</th>
-                  <th>Draft Status</th>
+                  <SortableHeader column="appointmentId" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Appointment ID
+                  </SortableHeader>
+                  <SortableHeader column="employeeName" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Employee
+                  </SortableHeader>
+                  <SortableHeader column="corporate" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Corporate
+                  </SortableHeader>
+                  <SortableHeader column="date" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Date
+                  </SortableHeader>
+                  <SortableHeader column="rate" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Rate (₹)
+                  </SortableHeader>
+                  <SortableHeader column="draftStatus" onSort={appointmentsSort.handleSort} getSortIcon={appointmentsSort.getSortIcon}>
+                    Draft Status
+                  </SortableHeader>
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appointment) => (
+                {appointmentsSort.sortedData.map((appointment) => (
                   <tr
                     key={appointment.id}
                     className={appointment.selected ? 'selected' : ''}
@@ -790,9 +810,9 @@ export const DCBills = () => {
                     <td>₹{appointment.rate.toLocaleString()}</td>
                     <td>
                       {appointment.draftStatus ? (
-                        <span className="badge-draft">{appointment.draftStatus}</span>
+                        <StatusBadge status={appointment.draftStatus} />
                       ) : (
-                        <span className="badge-medical-done">Available</span>
+                        <StatusBadge status="Available" />
                       )}
                     </td>
                   </tr>
@@ -1009,25 +1029,60 @@ export const DCBills = () => {
                 <table className="crm-table">
                   <thead>
                     <tr>
-                      <th>Docket Number</th>
-                      <th>Status</th>
-                      <th>DC</th>
-                      <th>Location</th>
-                      <th>Period</th>
-                      <th>Count</th>
-                      <th>Amount (₹)</th>
-                      <th>Created Date</th>
+                      <SortableHeader column="docketNumber" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Docket Number
+                      </SortableHeader>
+                      <SortableHeader column="status" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Status
+                      </SortableHeader>
+                      <SortableHeader column="zohoReference" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Zoho Reference
+                      </SortableHeader>
+                      <SortableHeader column="diagnosticCenter" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        DC
+                      </SortableHeader>
+                      <SortableHeader column="location" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Location
+                      </SortableHeader>
+                      <SortableHeader column="period" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Period
+                      </SortableHeader>
+                      <SortableHeader column="appointmentCount" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Count
+                      </SortableHeader>
+                      <SortableHeader column="totalAmount" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Amount (₹)
+                      </SortableHeader>
+                      <SortableHeader column="createdDate" onSort={dcBillsSort.handleSort} getSortIcon={dcBillsSort.getSortIcon}>
+                        Created Date
+                      </SortableHeader>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedDCBills.map((docket) => (
+                    {dcBillsSort.sortedData.slice(startIndex, endIndex).map((docket) => (
                     <tr key={docket.id}>
                       <td className="font-medium text-primary">{docket.docketNumber}</td>
                       <td>
-                        <span className={`badge-${docket.status.toLowerCase()}`}>
-                          {docket.status}
-                        </span>
+                        <DCBillStatusBadge status={docket.status} />
+                      </td>
+                      <td>
+                        {(docket.status === 'APPROVED' || docket.status === 'PAID') ? (
+                          <InlineZohoReferenceEdit
+                            value={docket.zohoReference}
+                            onSave={async (value) => {
+                              const result = await mockDataService.updateDCBillZohoReference(docket.id, value);
+                              if (result.success) {
+                                refetchDCBills();
+                              }
+                              return result;
+                            }}
+                            placeholder="Enter Zoho reference"
+                            disabled={docket.status === 'PAID'}
+                          />
+                        ) : (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
                       </td>
                       <td>{docket.diagnosticCenter}</td>
                       <td>{docket.location}</td>
@@ -1128,7 +1183,7 @@ export const DCBills = () => {
               
               <div className="flex items-center gap-4">
                 <span className="text-sm text-text-secondary">
-                  {startIndex + 1}-{Math.min(endIndex, allFilteredDCBills.length)} of {allFilteredDCBills.length}
+                  {startIndex + 1}-{Math.min(endIndex, dcBillsSort.sortedData.length)} of {dcBillsSort.sortedData.length}
                 </span>
                 
                 <Pagination>
@@ -1196,6 +1251,7 @@ export const DCBills = () => {
         dcBill={selectedDCBill}
         onDownload={handleDownloadDocket}
         onPrint={handlePrintDocket}
+        onUpdate={refetchDCBills}
       />
 
       {/* DC Bill Edit Modal */}

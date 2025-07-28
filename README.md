@@ -61,18 +61,21 @@ cd HM_CRM_Proto
 
 ### 2. Install Dependencies
 
-#### Frontend Dependencies
 ```bash
 npm install
 ```
 
-#### Backend Dependencies
-```bash
-cd server
-npm install
-```
+**Note**: Backend dependencies are not required for the current development version as it uses mock data.
 
-### 3. Database Setup
+### 3. Quick Start
+
+That's it! No database setup or environment configuration is needed for the current development version.
+
+Simply run `npm run dev` to start the application.
+
+### Database Setup (Future Implementation)
+
+When backend integration is added, you will need to:
 
 ```bash
 # From the server directory
@@ -81,7 +84,7 @@ npm run db:push        # Push schema to database
 npm run db:seed        # Seed initial data (optional)
 ```
 
-### 4. Environment Configuration
+### Environment Configuration (Future Implementation)
 
 Create a `.env` file in the server directory:
 
@@ -94,7 +97,21 @@ PORT=3001
 
 ### Development Mode
 
-You need to run both the frontend and backend servers:
+This project currently runs in frontend-only mode with mock data for development and prototyping purposes.
+
+#### Start the Application
+```bash
+# From the root directory
+npm run dev
+```
+
+The application will start on `http://localhost:8080`
+
+**Note**: The current version uses mock data and does not require a backend server. All data is generated in-memory for demonstration and development purposes.
+
+### Backend Integration (Future)
+
+When backend integration is implemented, you will need to run both servers:
 
 #### Start Backend Server
 ```bash

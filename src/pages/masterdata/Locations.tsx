@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
+import { useTableSort, SortableHeader } from '../../hooks/useTableSort';
 
 interface Location {
   id: string;
@@ -13,20 +14,19 @@ interface Location {
   name: string;
   city: string;
   area: string;
-  diagnosticCenter: string;
-  serviceTypes: string[];
+  gstin: string;
+  contractCode: string;
+  contractName: string;
+  entityCode: string;
+  entityName: string;
   status: 'Active' | 'Inactive';
 }
 
-interface LocationsProps {
-  onBack?: () => void;
-}
-
-export const Locations = ({ onBack }: LocationsProps) => {
+export const Locations = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [dcFilter, setDcFilter] = useState('all');
-  const [stateFilter, setStateFilter] = useState('all');
+  const [contractFilter, setContractFilter] = useState('all');
+  const [entityFilter, setEntityFilter] = useState('all');
 
   // Mock data - in real implementation, this would come from API
   const generateLocations = (): Location[] => {
@@ -51,25 +51,18 @@ export const Locations = ({ onBack }: LocationsProps) => {
       'Ballygunge', 'Satellite', 'Vastrapur', 'C-Scheme', 'Bapu Nagar', 'Vesu', 'Hazratganj'
     ];
 
-    const diagnosticCenters = [
-      'HealthCare Labs Mumbai', 'Medical Center Pune', 'Diagnostics Plus Bangalore', 'City Health Chennai',
-      'Prime Diagnostics Hyderabad', 'Advanced Medical Delhi', 'Wellness Labs Kolkata', 'Life Sciences Ahmedabad',
-      'Metro Health Jaipur', 'Central Diagnostics Surat', 'Unity Medical Lucknow', 'Global Health Kanpur',
-      'Precision Labs Nagpur', 'Supreme Diagnostics Indore', 'Alpha Medical Thane', 'Beta Healthcare Bhopal',
-      'Gamma Diagnostics Visakhapatnam', 'Delta Medical Pimpri', 'Epsilon Labs Patna', 'Zeta Health Vadodara',
-      'Omega Diagnostics Agra', 'Sigma Medical Ludhiana', 'Phoenix Labs Nashik', 'Eagle Healthcare Faridabad',
-      'Lion Medical Meerut', 'Tiger Diagnostics Rajkot', 'Lotus Health Kalyan', 'Rose Medical Vasai',
-      'Jasmine Labs Varanasi', 'Orchid Healthcare Srinagar'
+    const contractCodes = ['CORP001', 'CORP002', 'CORP003', 'CORP004', 'CORP005', 'CORP006', 'CORP007', 'CORP008'];
+    const contractNames = [
+      'Tech Solutions India Pvt Ltd', 'Global Services Ltd', 'Manufacturing Co', 'Financial Services Inc',
+      'Healthcare Systems Ltd', 'Digital Innovation Corp', 'Engineering Solutions', 'Pharma Industries'
     ];
 
-    const serviceTypeCombinations = [
-      ['AHC', 'PEC', 'OPD'],
-      ['AHC', 'PEC'],
-      ['AHC', 'OPD'],
-      ['PEC', 'OPD'],
-      ['AHC'],
-      ['PEC'],
-      ['OPD']
+    const entityCodes = ['ENT001', 'ENT002', 'ENT003', 'ENT004', 'ENT005', 'ENT006', 'ENT007', 'ENT008'];
+    const entityNames = [
+      'Tech Solutions India Pvt Ltd - Head Office', 'Global Services Ltd - Regional Office', 
+      'Manufacturing Co - Manufacturing Unit', 'Financial Services Inc - Sales Division',
+      'Healthcare Systems Ltd - Support Center', 'Digital Innovation Corp - Operations Hub',
+      'Engineering Solutions - Head Office', 'Pharma Industries - Regional Office'
     ];
 
     const locations: Location[] = [];
@@ -78,11 +71,16 @@ export const Locations = ({ onBack }: LocationsProps) => {
       const cityIndex = (i - 1) % cities.length;
       const areaIndex = (i - 1) % areas.length;
       const typeIndex = (i - 1) % locationTypes.length;
-      const dcIndex = (i - 1) % diagnosticCenters.length;
+      const contractIndex = (i - 1) % contractCodes.length;
+      const entityIndex = (i - 1) % entityCodes.length;
       
       const city = cities[cityIndex];
       const area = areas[areaIndex];
       const type = locationTypes[typeIndex];
+      
+      // Generate GSTIN based on location
+      const stateCode = ['27', '29', '33', '07', '36'][cityIndex % 5]; // Sample state codes
+      const gstin = `${stateCode}AABCT${(2000 + i).toString()}L${i % 10}Z${(i % 9) + 1}`;
       
       locations.push({
         id: i.toString(),
@@ -90,8 +88,11 @@ export const Locations = ({ onBack }: LocationsProps) => {
         name: `${area} ${type}`,
         city: city,
         area: area,
-        diagnosticCenter: diagnosticCenters[dcIndex],
-        serviceTypes: serviceTypeCombinations[i % serviceTypeCombinations.length],
+        gstin: gstin,
+        contractCode: contractCodes[contractIndex],
+        contractName: contractNames[contractIndex],
+        entityCode: entityCodes[entityIndex],
+        entityName: entityNames[entityIndex],
         status: i % 12 === 0 ? 'Inactive' : 'Active'
       });
     }
@@ -100,19 +101,25 @@ export const Locations = ({ onBack }: LocationsProps) => {
   };
 
   const locations = generateLocations();
+  const contracts = [...new Set(locations.map(l => ({ code: l.contractCode, name: l.contractName })))];
+  const entities = [...new Set(locations.map(l => ({ code: l.entityCode, name: l.entityName })))];
 
   const filteredLocations = locations.filter(location => {
     const matchesSearch = searchTerm === '' || 
       location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       location.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       location.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      location.area.toLowerCase().includes(searchTerm.toLowerCase());
+      location.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      location.gstin.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || location.status === statusFilter;
-    const matchesDC = dcFilter === 'all' || location.diagnosticCenter === dcFilter;
+    const matchesContract = contractFilter === 'all' || location.contractCode === contractFilter;
+    const matchesEntity = entityFilter === 'all' || location.entityCode === entityFilter;
     
-    return matchesSearch && matchesStatus && matchesDC;
+    return matchesSearch && matchesStatus && matchesContract && matchesEntity;
   });
+
+  const locationsSort = useTableSort(filteredLocations);
 
   const getStatusBadge = (status: string) => {
     return status === 'Active' ? (
@@ -122,33 +129,12 @@ export const Locations = ({ onBack }: LocationsProps) => {
     );
   };
 
-  const getServiceTypeBadges = (serviceTypes: string[]) => {
-    return serviceTypes.map(type => (
-      <Badge key={type} variant="outline" className="text-xs">
-        {type}
-      </Badge>
-    ));
-  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        {onBack && (
-          <Button variant="ghost" size="sm" onClick={onBack} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-        )}
-        <Breadcrumb items={[
-          { label: 'Master Data', href: '/accounting' },
-          { label: 'Locations' }
-        ]} />
-      </div>
-
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="page-title">Service Locations</h1>
-          <p className="text-text-secondary">Total Locations: {locations.length}</p>
+          <p className="text-text-secondary">Showing {filteredLocations.length} of {locations.length} locations</p>
         </div>
         <Button variant="outline" className="flex items-center gap-2">
           <Download className="w-4 h-4" />
@@ -173,7 +159,7 @@ export const Locations = ({ onBack }: LocationsProps) => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search by name, city, or area"
+                  placeholder="Search by name, city, area, or GSTIN"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -182,34 +168,37 @@ export const Locations = ({ onBack }: LocationsProps) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                Diagnostic Center
+                Contract
               </label>
-              <Select value={dcFilter} onValueChange={setDcFilter}>
+              <Select value={contractFilter} onValueChange={setContractFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All DCs" />
+                  <SelectValue placeholder="All Contracts" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All DCs</SelectItem>
-                  <SelectItem value="HealthCare Labs Mumbai">HealthCare Labs Mumbai</SelectItem>
-                  <SelectItem value="Medical Center Pune">Medical Center Pune</SelectItem>
-                  <SelectItem value="Diagnostics Plus Bangalore">Diagnostics Plus Bangalore</SelectItem>
-                  <SelectItem value="City Health Chennai">City Health Chennai</SelectItem>
+                  <SelectItem value="all">All Contracts</SelectItem>
+                  {contracts.map(contract => (
+                    <SelectItem key={contract.code} value={contract.code}>
+                      {contract.code} - {contract.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                State
+                Entity
               </label>
-              <Select value={stateFilter} onValueChange={setStateFilter}>
+              <Select value={entityFilter} onValueChange={setEntityFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All States" />
+                  <SelectValue placeholder="All Entities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All States</SelectItem>
-                  <SelectItem value="Maharashtra">Maharashtra</SelectItem>
-                  <SelectItem value="Karnataka">Karnataka</SelectItem>
-                  <SelectItem value="Tamil Nadu">Tamil Nadu</SelectItem>
+                  <SelectItem value="all">All Entities</SelectItem>
+                  {entities.map(entity => (
+                    <SelectItem key={entity.code} value={entity.code}>
+                      {entity.code} - {entity.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -235,25 +224,82 @@ export const Locations = ({ onBack }: LocationsProps) => {
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Service Locations ({filteredLocations.length})</CardTitle>
+          <CardTitle>Service Locations ({locationsSort.sortedData.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Location Code</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Location Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">City</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Area/Zone</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Diagnostic Center</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Service Types</th>
-                  <th className="text-left py-3 px-4 font-medium text-text-primary">Status</th>
+                  <SortableHeader
+                    column="code"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Location Code
+                  </SortableHeader>
+                  <SortableHeader
+                    column="name"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Location Name
+                  </SortableHeader>
+                  <SortableHeader
+                    column="city"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    City
+                  </SortableHeader>
+                  <SortableHeader
+                    column="area"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Area/Zone
+                  </SortableHeader>
+                  <SortableHeader
+                    column="gstin"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    GSTIN
+                  </SortableHeader>
+                  <SortableHeader
+                    column="contractCode"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Contract
+                  </SortableHeader>
+                  <SortableHeader
+                    column="entityCode"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Entity
+                  </SortableHeader>
+                  <SortableHeader
+                    column="status"
+                    onSort={locationsSort.handleSort}
+                    getSortIcon={locationsSort.getSortIcon}
+                    className="text-left py-3 px-4 font-medium text-text-primary"
+                  >
+                    Status
+                  </SortableHeader>
                   <th className="text-left py-3 px-4 font-medium text-text-primary">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredLocations.map((location) => (
+                {locationsSort.sortedData.map((location) => (
                   <tr key={location.id} className="border-b hover:bg-gray-50 cursor-pointer">
                     <td className="py-3 px-4 text-sm text-text-primary font-medium">
                       {location.code}
@@ -267,14 +313,19 @@ export const Locations = ({ onBack }: LocationsProps) => {
                     <td className="py-3 px-4 text-sm text-text-secondary">
                       {location.area}
                     </td>
-                    <td className="py-3 px-4 text-sm text-text-secondary">
-                      <span className="text-primary cursor-pointer hover:underline">
-                        {location.diagnosticCenter}
-                      </span>
+                    <td className="py-3 px-4 text-sm text-text-secondary font-mono">
+                      {location.gstin}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex flex-wrap gap-1">
-                        {getServiceTypeBadges(location.serviceTypes)}
+                      <div className="text-sm">
+                        <div className="font-medium text-blue-600">{location.contractCode}</div>
+                        <div className="text-xs text-text-secondary">{location.contractName}</div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm">
+                        <div className="font-medium text-purple-600">{location.entityCode}</div>
+                        <div className="text-xs text-text-secondary">{location.entityName}</div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -292,7 +343,7 @@ export const Locations = ({ onBack }: LocationsProps) => {
             </table>
           </div>
           
-          {filteredLocations.length === 0 && (
+          {locationsSort.sortedData.length === 0 && (
             <div className="text-center py-8">
               <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-text-secondary">No locations found matching your filters.</p>
@@ -304,7 +355,7 @@ export const Locations = ({ onBack }: LocationsProps) => {
       {/* Pagination */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-text-secondary">
-          Showing {filteredLocations.length} of {locations.length} results
+          Showing {locationsSort.sortedData.length} of {locations.length} results
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" disabled>

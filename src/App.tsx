@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import { Accounting } from "./pages/Accounting";
 import { Receivables } from "./pages/Receivables";
 import { DCBills } from "./pages/DCBills";
+import { Employees } from "./pages/Employees";
 import Eligibility from "./pages/Eligibility";
 import EligibilityReports from "./pages/eligibility/EligibilityReports";
 import { Breadcrumb } from "./components/Breadcrumb";
@@ -45,6 +46,20 @@ const DCBillsPage = () => (
   </div>
 );
 
+const EmployeesPage = () => (
+  <div>
+    <Breadcrumb items={[
+      { label: 'Home', href: '/' },
+      { label: 'Accounting', href: '/accounting' },
+      { label: 'Employees' }
+    ]} />
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="page-title">Employees</h1>
+    </div>
+    <Employees />
+  </div>
+);
+
 const EligibilityReportsPage = () => (
   <div>
     <Breadcrumb items={[
@@ -69,6 +84,7 @@ const App = () => (
             <Route path="/accounting" element={<Accounting />} />
             <Route path="/accounting/receivables" element={<ReceivablesPage />} />
             <Route path="/accounting/dc-bills" element={<DCBillsPage />} />
+            <Route path="/accounting/employees" element={<EmployeesPage />} />
             <Route path="/eligibility" element={<Eligibility />} />
             <Route path="/eligibility/reports" element={<EligibilityReportsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
