@@ -1,10 +1,12 @@
-import { Building2, Users, MapPin, Stethoscope, UserCheck, Info } from 'lucide-react';
+import { Building2, Users, MapPin, Stethoscope, UserCheck, Package, FileText, Info } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Corporates } from './masterdata/Corporates';
 import { Entities } from './masterdata/Entities';
 import { Locations } from './masterdata/Locations';
 import { Services } from './masterdata/Services';
 import { HRContacts } from './masterdata/HRContacts';
+import { Packages } from './masterdata/Packages';
+import { PurchaseOrders } from './masterdata/PurchaseOrders';
 
 export const Masters = () => {
   return (
@@ -18,7 +20,7 @@ export const Masters = () => {
       </div>
 
       <Tabs defaultValue="corporates" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="corporates" className="flex items-center gap-2">
             <Building2 className="w-4 h-4" />
             Contracts
@@ -34,6 +36,14 @@ export const Masters = () => {
           <TabsTrigger value="services" className="flex items-center gap-2">
             <Stethoscope className="w-4 h-4" />
             Service Types
+          </TabsTrigger>
+          <TabsTrigger value="packages" className="flex items-center gap-2">
+            <Package className="w-4 h-4" />
+            Packages
+          </TabsTrigger>
+          <TabsTrigger value="purchase-orders" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Purchase Orders
           </TabsTrigger>
           <TabsTrigger value="hr-contacts" className="flex items-center gap-2">
             <UserCheck className="w-4 h-4" />
@@ -55,6 +65,14 @@ export const Masters = () => {
         
         <TabsContent value="services" className="mt-6">
           <Services />
+        </TabsContent>
+        
+        <TabsContent value="packages" className="mt-6">
+          <Packages />
+        </TabsContent>
+        
+        <TabsContent value="purchase-orders" className="mt-6">
+          <PurchaseOrders />
         </TabsContent>
         
         <TabsContent value="hr-contacts" className="mt-6">
